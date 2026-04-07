@@ -8,6 +8,7 @@ A simple todo app made with axum, postgresql and GraphQL
 
 * Rust (install via [rustup](https://rustup.rs))
 * [Docker](https://www.docker.com)
+* for hurl tests [Hurl](https://hurl.dev)
 
 ## Project Structure
 
@@ -46,6 +47,7 @@ Running the application tests:
 
 ```
 cargo test
+./tests/run.sh
 ```
 
 Running database tasks like executing migrations or seeding the database (see the [CLI create](./cli/README.md) for detailed documentation):
