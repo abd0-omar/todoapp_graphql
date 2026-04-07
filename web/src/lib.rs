@@ -62,4 +62,3 @@ pub fn init_tracing() {
 
     std::panic::set_hook(Box::new(panic_hook));
 }
-
