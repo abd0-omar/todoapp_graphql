@@ -2,7 +2,7 @@
 
 This README explains how to collaborate on this Gerust application.
 
-<add a description of the project here>
+A simple todo app made with axum, postgresql and GraphQL
 
 ## Prerequisites
 
