@@ -46,7 +46,8 @@ cargo run
 Running the application tests:
 
 ```
-cargo test
+cargo db reset
+cargo run
 ./tests/run.sh
 ```
 

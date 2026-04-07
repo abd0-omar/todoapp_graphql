@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use fake::Dummy;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::Postgres;
+use todoapp_graphql_db_queries::queries::todos as todo_queries;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -26,101 +26,109 @@ pub struct TodoChangeset {
     pub is_completed: bool,
 }
 
-pub async fn load_all(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-) -> Result<Vec<Todo>, crate::Error> {
-    let todos = sqlx::query_as!(
-        Todo,
-        "SELECT id, title, description as \"description!\", is_completed as \"is_completed!\", created_at as \"created_at!\", updated_at as \"updated_at!\" FROM todos"
-    )
-    .fetch_all(executor)
-    .await?;
-    Ok(todos)
+fn todo_from_load_all(todo: todo_queries::LoadAllBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
 }
 
-pub async fn load(
-    id: Uuid,
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-) -> Result<Todo, crate::Error> {
-    match sqlx::query_as!(
-        Todo,
-        r#"SELECT id, title, description as "description!", is_completed as "is_completed!", created_at as "created_at!", updated_at as "updated_at!" FROM todos WHERE id = $1"#,
-        id
-    )
-    .fetch_optional(executor)
-    .await
-    .map_err(crate::Error::DbError)?
+fn todo_from_load(todo: todo_queries::LoadBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
+}
+
+fn todo_from_create(todo: todo_queries::CreateBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
+}
+
+fn todo_from_update(todo: todo_queries::UpdateBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
+}
+
+pub async fn load_all(db_pool: &crate::DbPool) -> Result<Vec<Todo>, crate::Error> {
+    let client = db_pool.get().await?;
+    Ok(todo_queries::load_all()
+        .bind(&client)
+        .map(todo_from_load_all)
+        .all()
+        .await?)
+}
+
+pub async fn load(id: Uuid, db_pool: &crate::DbPool) -> Result<Todo, crate::Error> {
+    let client = db_pool.get().await?;
+    match todo_queries::load()
+        .bind(&client, &id)
+        .map(todo_from_load)
+        .opt()
+        .await?
     {
         Some(todo) => Ok(todo),
         None => Err(crate::Error::NoRecordFound),
     }
 }
 
-pub async fn create(
-    todo: TodoChangeset,
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-) -> Result<Todo, crate::Error> {
+pub async fn create(todo: TodoChangeset, db_pool: &crate::DbPool) -> Result<Todo, crate::Error> {
+    let client = db_pool.get().await?;
     todo.validate()?;
-
-    let record = sqlx::query!(
-        r#"INSERT INTO todos (title, description, is_completed) VALUES ($1, $2, $3) RETURNING id, created_at as "created_at!", updated_at as "updated_at!""#,
-        todo.title,
-        todo.description,
-        todo.is_completed,
-    )
-    .fetch_one(executor)
-    .await
-    .map_err(crate::Error::DbError)?;
-
-    Ok(Todo {
-        id: record.id,
-        title: todo.title,
-        description: todo.description,
-        is_completed: todo.is_completed,
-        created_at: record.created_at,
-        updated_at: record.updated_at,
-    })
+    Ok(todo_queries::create()
+        .bind(&client, &todo.title, &todo.description, &todo.is_completed)
+        .map(todo_from_create)
+        .one()
+        .await?)
 }
 
 pub async fn update(
     id: Uuid,
     todo: TodoChangeset,
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    db_pool: &crate::DbPool,
 ) -> Result<Todo, crate::Error> {
+    let client = db_pool.get().await?;
     todo.validate()?;
-
-    match sqlx::query!(
-        r#"UPDATE todos SET title = $1, description = $2, is_completed = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, created_at as "created_at!", updated_at as "updated_at!""#,
-        todo.title,
-        todo.description,
-        todo.is_completed,
-        id
-    )
-    .fetch_optional(executor)
-    .await
-    .map_err(crate::Error::DbError)?
+    match todo_queries::update()
+        .bind(
+            &client,
+            &todo.title,
+            &todo.description,
+            &todo.is_completed,
+            &id,
+        )
+        .map(todo_from_update)
+        .opt()
+        .await?
     {
-        Some(record) => Ok(Todo {
-            id: record.id,
-            title: todo.title,
-            description: todo.description,
-            is_completed: todo.is_completed,
-            created_at: record.created_at,
-            updated_at: record.updated_at,
-        }),
+        Some(todo) => Ok(todo),
         None => Err(crate::Error::NoRecordFound),
     }
 }
 
-pub async fn delete(
-    id: Uuid,
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-) -> Result<(), crate::Error> {
-    match sqlx::query!("DELETE FROM todos WHERE id = $1 RETURNING id", id)
-        .fetch_optional(executor)
-        .await
-        .map_err(crate::Error::DbError)?
-    {
+pub async fn delete(id: Uuid, db_pool: &crate::DbPool) -> Result<(), crate::Error> {
+    let client = db_pool.get().await?;
+    match todo_queries::delete().bind(&client, &id).opt().await? {
         Some(_) => Ok(()),
         None => Err(crate::Error::NoRecordFound),
     }

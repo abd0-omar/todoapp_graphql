@@ -1,0 +1,11 @@
+queries = "db/queries"
+destination = "db_queries"
+use-workspace-deps = "Cargo.toml"
+
+[types.mapping]
+"pg_catalog.timestamptz" = "chrono::DateTime<chrono::Utc>"
+
+[manifest.package]
+name = "todoapp_graphql-db-queries"
+edition = "2021"
+publish = false
