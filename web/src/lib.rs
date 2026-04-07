@@ -1,4 +1,4 @@
-//! The todoapp_graphql_web crate contains the application's web interface which mainly are controllers implementing HTTP endpoints. It also includes the application tests that are black-box tests, interfacing with the application like any other HTTP client.
+//! The todoapp_graphql_web crate contains the application's web interface with a GraphQL API. It also includes the application tests that are black-box tests, interfacing with the application like any other HTTP client.
 
 use anyhow::Context;
 use axum::serve;
@@ -8,11 +8,11 @@ use tracing::info;
 use tracing_panic::panic_hook;
 use tracing_subscriber::{filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-/// The application's controllers that implement request handlers.
-pub mod controllers;
-/// Contains the application's error type and related conversion implementation.
+/// The application's error type and related conversion implementation.
 pub mod error;
-/// Middlewares that incoming requests are passed through before being passed to [`controllers`].
+/// The GraphQL schema, queries, and mutations.
+pub mod graphql;
+/// Middlewares that incoming requests are passed through.
 pub mod middlewares;
 /// Contains the application's route definitions.
 pub mod routes;

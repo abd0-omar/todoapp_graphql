@@ -5,51 +5,94 @@ use axum::{
 use fake::{Fake, Faker};
 use googletest::prelude::*;
 use hyper::StatusCode;
-use serde_json::json;
+use serde_json::{json, Value};
 use todoapp_graphql_db::entities;
 use todoapp_graphql_macros::db_test;
 use todoapp_graphql_web::test_helpers::{BodyExt, DbTestContext, RouterExt};
-use uuid::Uuid;
+
+fn graphql_request(query: &str, variables: Option<Value>) -> String {
+    let body = match variables {
+        Some(vars) => json!({ "query": query, "variables": vars }),
+        None => json!({ "query": query }),
+    };
+    body.to_string()
+}
 
 #[db_test]
 async fn test_create_invalid(context: &DbTestContext) {
-    let payload = json!(entities::todos::TodoChangeset {
-        title: String::from(""),
-        description: String::from(""),
-        is_completed: false,
+    let query = r#"
+        mutation CreateTodo($input: TodoInput!) {
+            createTodo(input: $input) {
+                id
+                title
+            }
+        }
+    "#;
+    let variables = json!({
+        "input": {
+            "title": "",
+            "description": "",
+            "isCompleted": false
+        }
     });
 
     let response = context
         .app
-        .request("/todos")
+        .request("/graphql")
         .method(Method::POST)
-        .body(Body::from(payload.to_string()))
+        .body(Body::from(graphql_request(query, Some(variables))))
         .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::UNPROCESSABLE_ENTITY));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_array());
+    assert!(!body["errors"].as_array().unwrap().is_empty());
 }
 
 #[db_test]
 async fn test_create_success(context: &DbTestContext) {
     let changeset: entities::todos::TodoChangeset = Faker.fake();
-    let payload = json!(changeset);
+    let query = r#"
+        mutation CreateTodo($input: TodoInput!) {
+            createTodo(input: $input) {
+                id
+                title
+                description
+                isCompleted
+            }
+        }
+    "#;
+    let variables = json!({
+        "input": {
+            "title": changeset.title,
+            "description": changeset.description,
+            "isCompleted": changeset.is_completed
+        }
+    });
 
     let response = context
         .app
-        .request("/todos")
+        .request("/graphql")
         .method(Method::POST)
-        .body(Body::from(payload.to_string()))
+        .body(Body::from(graphql_request(query, Some(variables))))
         .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::CREATED));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert_that!(
+        body["data"]["createTodo"]["title"].as_str().unwrap(),
+        eq(&changeset.title)
+    );
 
     let todos = entities::todos::load_all(&context.db_pool).await.unwrap();
     assert_that!(todos, len(eq(1)));
-    assert_that!(todos.first().unwrap().title, eq(&changeset.title));
 }
 
 #[db_test]
@@ -59,27 +102,63 @@ async fn test_read_all(context: &DbTestContext) {
         .await
         .unwrap();
 
-    let response = context.app.request("/todos").send().await;
+    let query = r#"
+        query {
+            todos {
+                id
+                title
+                description
+                isCompleted
+            }
+        }
+    "#;
+
+    let response = context
+        .app
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, None)))
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .send()
+        .await;
 
     assert_that!(response.status(), eq(StatusCode::OK));
 
-    let todos: Vec<entities::todos::Todo> = response
-        .into_body()
-        .into_json::<Vec<entities::todos::Todo>>()
-        .await;
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    let todos = body["data"]["todos"].as_array().unwrap();
     assert_that!(todos, len(eq(1)));
-    assert_that!(todos.first().unwrap().title, eq(&changeset.title));
+    assert_that!(todos[0]["title"].as_str().unwrap(), eq(&changeset.title));
 }
 
 #[db_test]
 async fn test_read_one_nonexistent(context: &DbTestContext) {
+    let query = r#"
+        query GetTodo($id: UUID!) {
+            todo(id: $id) {
+                id
+                title
+            }
+        }
+    "#;
+    let variables = json!({
+        "id": uuid::Uuid::new_v4().to_string()
+    });
+
     let response = context
         .app
-        .request(&format!("/todos/{}", Uuid::new_v4()))
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
+        .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::NOT_FOUND));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert!(body["data"]["todo"].is_null());
 }
 
 #[db_test]
@@ -88,22 +167,38 @@ async fn test_read_one_success(context: &DbTestContext) {
     let todo = entities::todos::create(todo_changeset.clone(), &context.db_pool)
         .await
         .unwrap();
-    let todo_id = todo.id;
+
+    let query = r#"
+        query GetTodo($id: UUID!) {
+            todo(id: $id) {
+                id
+                title
+                description
+                isCompleted
+            }
+        }
+    "#;
+    let variables = json!({
+        "id": todo.id.to_string()
+    });
 
     let response = context
         .app
-        .request(&format!("/todos/{}", todo_id))
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
+        .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
     assert_that!(response.status(), eq(StatusCode::OK));
 
-    let todo: entities::todos::Todo = response
-        .into_body()
-        .into_json::<entities::todos::Todo>()
-        .await;
-    assert_that!(todo.id, eq(todo_id));
-    assert_that!(todo.title, eq(&todo_changeset.title));
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert_that!(
+        body["data"]["todo"]["title"].as_str().unwrap(),
+        eq(&todo_changeset.title)
+    );
 }
 
 #[db_test]
@@ -113,22 +208,36 @@ async fn test_update_invalid(context: &DbTestContext) {
         .await
         .unwrap();
 
-    let payload = json!(entities::todos::TodoChangeset {
-        title: String::from(""),
-        description: String::from(""),
-        is_completed: false,
+    let query = r#"
+        mutation UpdateTodo($id: UUID!, $input: TodoInput!) {
+            updateTodo(id: $id, input: $input) {
+                id
+                title
+            }
+        }
+    "#;
+    let variables = json!({
+        "id": todo.id.to_string(),
+        "input": {
+            "title": "",
+            "description": "",
+            "isCompleted": false
+        }
     });
 
     let response = context
         .app
-        .request(&format!("/todos/{}", todo.id))
-        .method(Method::PUT)
-        .body(Body::from(payload.to_string()))
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
         .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::UNPROCESSABLE_ENTITY));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_array());
 
     let todo_after = entities::todos::load(todo.id, &context.db_pool)
         .await
@@ -138,19 +247,37 @@ async fn test_update_invalid(context: &DbTestContext) {
 
 #[db_test]
 async fn test_update_nonexistent(context: &DbTestContext) {
-    let todo_changeset: entities::todos::TodoChangeset = Faker.fake();
-    let payload = json!(todo_changeset);
+    let query = r#"
+        mutation UpdateTodo($id: UUID!, $input: TodoInput!) {
+            updateTodo(id: $id, input: $input) {
+                id
+                title
+            }
+        }
+    "#;
+    let variables = json!({
+        "id": uuid::Uuid::new_v4().to_string(),
+        "input": {
+            "title": "Some title",
+            "description": "Some description",
+            "isCompleted": false
+        }
+    });
 
     let response = context
         .app
-        .request(&format!("/todos/{}", Uuid::new_v4()))
-        .method(Method::PUT)
-        .body(Body::from(payload.to_string()))
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
         .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::NOT_FOUND));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert!(body["data"]["updateTodo"].is_null());
 }
 
 #[db_test]
@@ -160,42 +287,75 @@ async fn test_update_success(context: &DbTestContext) {
         .await
         .unwrap();
 
-    let todo_changeset: entities::todos::TodoChangeset = Faker.fake();
-    let payload = json!(todo_changeset);
+    let new_changeset: entities::todos::TodoChangeset = Faker.fake();
+    let query = r#"
+        mutation UpdateTodo($id: UUID!, $input: TodoInput!) {
+            updateTodo(id: $id, input: $input) {
+                id
+                title
+                description
+                isCompleted
+            }
+        }
+    "#;
+    let variables = json!({
+        "id": todo.id.to_string(),
+        "input": {
+            "title": new_changeset.title,
+            "description": new_changeset.description,
+            "isCompleted": new_changeset.is_completed
+        }
+    });
 
     let response = context
         .app
-        .request(&format!("/todos/{}", todo.id))
-        .method(Method::PUT)
-        .body(Body::from(payload.to_string()))
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
         .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
     assert_that!(response.status(), eq(StatusCode::OK));
 
-    let todo: entities::todos::Todo = response
-        .into_body()
-        .into_json::<entities::todos::Todo>()
-        .await;
-    assert_that!(todo.title, eq(&todo_changeset.title.clone()));
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert_that!(
+        body["data"]["updateTodo"]["title"].as_str().unwrap(),
+        eq(&new_changeset.title)
+    );
 
-    let todo = entities::todos::load(todo.id, &context.db_pool)
+    let todo_after = entities::todos::load(todo.id, &context.db_pool)
         .await
         .unwrap();
-    assert_that!(todo.title, eq(&todo_changeset.title));
+    assert_that!(todo_after.title, eq(&new_changeset.title));
 }
 
 #[db_test]
 async fn test_delete_nonexistent(context: &DbTestContext) {
+    let query = r#"
+        mutation DeleteTodo($id: UUID!) {
+            deleteTodo(id: $id)
+        }
+    "#;
+    let variables = json!({
+        "id": uuid::Uuid::new_v4().to_string()
+    });
+
     let response = context
         .app
-        .request(&format!("/todos/{}", Uuid::new_v4()))
-        .method(Method::DELETE)
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
+        .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::NOT_FOUND));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert_that!(body["data"]["deleteTodo"].as_bool().unwrap(), eq(false));
 }
 
 #[db_test]
@@ -205,14 +365,29 @@ async fn test_delete_success(context: &DbTestContext) {
         .await
         .unwrap();
 
+    let query = r#"
+        mutation DeleteTodo($id: UUID!) {
+            deleteTodo(id: $id)
+        }
+    "#;
+    let variables = json!({
+        "id": todo.id.to_string()
+    });
+
     let response = context
         .app
-        .request(&format!("/todos/{}", todo.id))
-        .method(Method::DELETE)
+        .request("/graphql")
+        .method(Method::POST)
+        .body(Body::from(graphql_request(query, Some(variables))))
+        .header(http::header::CONTENT_TYPE, "application/json")
         .send()
         .await;
 
-    assert_that!(response.status(), eq(StatusCode::NO_CONTENT));
+    assert_that!(response.status(), eq(StatusCode::OK));
+
+    let body: Value = response.into_body().into_json().await;
+    assert!(body["errors"].is_null());
+    assert_that!(body["data"]["deleteTodo"].as_bool().unwrap(), eq(true));
 
     let result = entities::todos::load(todo.id, &context.db_pool).await;
     assert_that!(result, err(anything()));
