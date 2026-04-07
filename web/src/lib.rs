@@ -63,6 +63,3 @@ pub fn init_tracing() {
     std::panic::set_hook(Box::new(panic_hook));
 }
 
-/// Helpers that simplify writing application tests.
-#[cfg(feature = "test-helpers")]
-pub mod test_helpers;

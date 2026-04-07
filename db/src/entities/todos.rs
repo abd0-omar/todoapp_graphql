@@ -1,6 +1,4 @@
 use chrono::{DateTime, Utc};
-#[cfg(feature = "test-helpers")]
-use fake::Dummy;
 use serde::Deserialize;
 use serde::Serialize;
 use todoapp_graphql_db_queries::queries::todos as todo_queries;
@@ -18,7 +16,6 @@ pub struct Todo {
 }
 
 #[derive(Deserialize, Validate, Clone)]
-#[cfg_attr(feature = "test-helpers", derive(Serialize, Dummy))]
 pub struct TodoChangeset {
     #[validate(length(min = 1, message = "title cannot be empty"))]
     pub title: String,

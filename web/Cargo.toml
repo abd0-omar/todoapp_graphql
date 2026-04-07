@@ -8,14 +8,6 @@ publish = false
 # examples in docs don't run without a running database, etc.
 doctest = false
 
-[features]
-test-helpers = [
-    "dep:serde_json",
-    "dep:tower",
-    "dep:hyper",
-    "dep:todoapp_graphql-macros",
-]
-
 [dependencies]
 anyhow = "1.0"
 axum = { version = "0.8", features = ["macros"] }
@@ -32,18 +24,8 @@ tracing-subscriber = { version = "0.3", features = [
     "fmt",
 ] }
 uuid = { version = "1.6", features = ["serde"] }
-serde_json = { version = "1.0", optional = true }
 thiserror = "2.0"
-tower = { version = "0.5", features = ["util"], optional = true }
-hyper = { version = "1.0", features = ["full"], optional = true }
 validator = "0.20"
-todoapp_graphql-macros = { path = "../macros", optional = true }
 async-graphql = { version = "7.2.1", features = ["chrono", "uuid"] }
 async-graphql-axum = "7.2.1"
 chrono = { version = "0.4", features = ["serde"] }
-
-[dev-dependencies]
-fake = "4.0"
-googletest = "0.14"
-todoapp_graphql-db = { path = "../db", features = ["test-helpers"] }
-todoapp_graphql-web = { path = ".", features = ["test-helpers"] }
