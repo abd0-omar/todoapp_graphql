@@ -17,4 +17,4 @@ services:
       POSTGRES_USER: todoapp_graphql_test
       POSTGRES_DB: todoapp_graphql_test
     ports:
-      - 5433:5432
+      - 5434:5432

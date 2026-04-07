@@ -20,6 +20,7 @@ pub struct Todo {
 #[derive(Deserialize, Validate, Clone)]
 #[cfg_attr(feature = "test-helpers", derive(Serialize, Dummy))]
 pub struct TodoChangeset {
+    #[validate(length(min = 1, message = "title cannot be empty"))]
     pub title: String,
     pub description: String,
     pub is_completed: bool,
