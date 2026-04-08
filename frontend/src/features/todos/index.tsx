@@ -18,7 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { createTodo, getTodos, todoKeys, updateTodo } from './api/todos'
+import { createTodo, deleteTodo, getTodos, todoKeys, updateTodo } from './api/todos'
+import { TodoDeleteDialog } from './components/todo-delete-dialog'
 import {
   TodoEmptyState,
   TodoList,
@@ -31,14 +32,33 @@ export function Todos() {
   const queryClient = useQueryClient()
   const [isDialogOpen, setDialogOpen] = useState(false)
   const [currentTodo, setCurrentTodo] = useState<Todo | undefined>()
+  const [todoToDelete, setTodoToDelete] = useState<Todo | undefined>()
   const todosQuery = useQuery({
     queryKey: todoKeys.all,
     queryFn: ({ signal }) => getTodos(signal),
   })
 
+  const replaceTodoInCache = (updatedTodo: Todo) => {
+    queryClient.setQueryData<Todo[]>(todoKeys.all, (currentTodos = []) =>
+      currentTodos.map((todo) =>
+        todo.id === updatedTodo.id ? updatedTodo : todo
+      )
+    )
+  }
+
+  const removeTodoFromCache = (todoId: string) => {
+    queryClient.setQueryData<Todo[]>(todoKeys.all, (currentTodos = []) =>
+      currentTodos.filter((todo) => todo.id !== todoId)
+    )
+  }
+
   const closeDialog = () => {
     setDialogOpen(false)
     setCurrentTodo(undefined)
+  }
+
+  const closeDeleteDialog = () => {
+    setTodoToDelete(undefined)
   }
 
   const createTodoMutation = useMutation({
@@ -57,6 +77,33 @@ export function Todos() {
       await queryClient.invalidateQueries({ queryKey: todoKeys.all })
       toast.success('Todo updated.')
       closeDialog()
+    },
+  })
+
+  const toggleTodoMutation = useMutation({
+    mutationFn: ({ todo, isCompleted }: { todo: Todo; isCompleted: boolean }) =>
+      updateTodo(todo.id, {
+        title: todo.title,
+        description: todo.description,
+        isCompleted,
+      }),
+    onSuccess: (updatedTodo, variables) => {
+      replaceTodoInCache(updatedTodo)
+      toast.success(
+        variables.isCompleted ? 'Todo marked complete.' : 'Todo marked open.'
+      )
+    },
+  })
+
+  const deleteTodoMutation = useMutation({
+    mutationFn: async (todo: Todo) => {
+      await deleteTodo(todo.id)
+      return todo
+    },
+    onSuccess: (deletedTodo) => {
+      removeTodoFromCache(deletedTodo.id)
+      toast.success('Todo deleted.')
+      closeDeleteDialog()
     },
   })
 
@@ -148,13 +195,51 @@ export function Todos() {
               <TodoList
                 todos={todosQuery.data}
                 renderActions={(todo) => (
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => openEditDialog(todo)}
-                  >
-                    Edit
-                  </Button>
+                  <div className='flex flex-wrap justify-end gap-2'>
+                    <Button
+                      size='sm'
+                      variant={todo.isCompleted ? 'outline' : 'default'}
+                      disabled={
+                        toggleTodoMutation.isPending ||
+                        deleteTodoMutation.isPending
+                      }
+                      onClick={() =>
+                        toggleTodoMutation.mutate({
+                          todo,
+                          isCompleted: !todo.isCompleted,
+                        })
+                      }
+                    >
+                      {toggleTodoMutation.isPending &&
+                      toggleTodoMutation.variables?.todo.id === todo.id
+                        ? 'Saving...'
+                        : todo.isCompleted
+                          ? 'Mark open'
+                          : 'Complete'}
+                    </Button>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      disabled={
+                        toggleTodoMutation.isPending ||
+                        deleteTodoMutation.isPending
+                      }
+                      onClick={() => openEditDialog(todo)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant='destructive'
+                      size='sm'
+                      disabled={
+                        toggleTodoMutation.isPending ||
+                        deleteTodoMutation.isPending
+                      }
+                      onClick={() => setTodoToDelete(todo)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 )}
               />
             ) : null}
@@ -175,6 +260,21 @@ export function Todos() {
         }}
         onSubmit={handleDialogSubmit}
         isPending={isMutating}
+      />
+
+      <TodoDeleteDialog
+        open={!!todoToDelete}
+        currentTodo={todoToDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeDeleteDialog()
+          }
+        }}
+        onConfirm={() => {
+          if (!todoToDelete) return
+          deleteTodoMutation.mutate(todoToDelete)
+        }}
+        isPending={deleteTodoMutation.isPending}
       />
     </>
   )

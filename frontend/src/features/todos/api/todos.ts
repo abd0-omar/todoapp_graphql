@@ -23,6 +23,14 @@ type UpdateTodoMutationVariables = {
   input: TodoInput
 }
 
+type DeleteTodoMutationResponse = {
+  deleteTodo: boolean
+}
+
+type DeleteTodoMutationVariables = {
+  id: string
+}
+
 const todosQueryResponseSchema = z.object({
   todos: z.array(todoSchema),
 })
@@ -33,6 +41,10 @@ const createTodoMutationResponseSchema = z.object({
 
 const updateTodoMutationResponseSchema = z.object({
   updateTodo: todoSchema.nullable(),
+})
+
+const deleteTodoMutationResponseSchema = z.object({
+  deleteTodo: z.boolean(),
 })
 
 export const todoKeys = {
@@ -112,6 +124,30 @@ export async function updateTodo(id: string, input: TodoInput) {
   }
 
   return updatedTodo
+}
+
+export async function deleteTodo(id: string) {
+  const data = await graphqlRequest<
+    DeleteTodoMutationResponse,
+    DeleteTodoMutationVariables
+  >({
+    query: `
+      mutation DeleteTodo($id: UUID!) {
+        deleteTodo(id: $id)
+      }
+    `,
+    variables: {
+      id,
+    },
+  })
+
+  const deleted = deleteTodoMutationResponseSchema.parse(data).deleteTodo
+
+  if (!deleted) {
+    throw new GraphQLRequestError('Todo not found.', { status: 404 })
+  }
+
+  return deleted
 }
 
 export type { Todo, TodoInput } from '../schema'
