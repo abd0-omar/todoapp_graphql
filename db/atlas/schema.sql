@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS todos (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     tags TEXT[],
+    note TEXT,
     is_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
