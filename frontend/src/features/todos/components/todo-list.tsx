@@ -78,7 +78,11 @@ export function TodoListSkeleton() {
   )
 }
 
-export function TodoEmptyState() {
+type TodoEmptyStateProps = {
+  action?: React.ReactNode
+}
+
+export function TodoEmptyState({ action }: TodoEmptyStateProps) {
   return (
     <Card>
       <CardHeader>
@@ -88,9 +92,10 @@ export function TodoEmptyState() {
         </div>
         <CardTitle>Your todo list is empty</CardTitle>
         <CardDescription>
-          Create your first todo once the write actions are added to this page.
+          Create your first todo to start tracking work from the GraphQL API.
         </CardDescription>
       </CardHeader>
+      {action ? <CardContent>{action}</CardContent> : null}
     </Card>
   )
 }
