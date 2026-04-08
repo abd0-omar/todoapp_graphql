@@ -86,6 +86,7 @@ export function Todos() {
         title: todo.title,
         description: todo.description,
         isCompleted,
+        tags: todo.tags,
       }),
     onSuccess: (updatedTodo, variables) => {
       replaceTodoInCache(updatedTodo)

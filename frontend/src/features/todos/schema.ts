@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+export function normalizeTags(tags: string[]) {
+  return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))]
+}
+
 export const todoSchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -14,6 +18,7 @@ export const todoInputSchema = z.object({
   title: z.string().trim().min(1, 'Title is required.'),
   description: z.string().trim(),
   isCompleted: z.boolean(),
+  tags: z.array(z.string()).transform(normalizeTags),
 })
 
 export type Todo = z.infer<typeof todoSchema>

@@ -175,5 +175,6 @@ function getDefaultValues(todo?: Todo): TodoInput {
     title: todo?.title ?? '',
     description: todo?.description ?? '',
     isCompleted: todo?.isCompleted ?? false,
+    tags: todo?.tags ?? [],
   }
 }
