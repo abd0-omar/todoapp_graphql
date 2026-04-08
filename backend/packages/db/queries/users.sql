@@ -16,3 +16,13 @@ FROM
     users
 WHERE
     email = :email;
+
+--! load_by_id
+SELECT
+    id,
+    email,
+    created_at
+FROM
+    users
+WHERE
+    id = :id;

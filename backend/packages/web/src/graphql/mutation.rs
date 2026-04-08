@@ -52,8 +52,7 @@ impl MutationRoot {
         let ttl = *ctx.data::<u64>()?;
         let hash = tokio::task::spawn_blocking(move || hash_password(&password_owned))
             .await
-            .map_err(|e| Error::new(format!("password hashing failed: {e}")))?
-            ?;
+            .map_err(|e| Error::new(format!("password hashing failed: {e}")))??;
         let changeset = UserChangeset {
             email: input.email.trim().to_lowercase(),
             password_hash: hash,
@@ -94,11 +93,10 @@ impl MutationRoot {
         };
         let password_owned = password.expose_secret().to_string();
         let password_hash = creds.password_hash.clone();
-        let verified = tokio::task::spawn_blocking(move || {
-            verify_password(&password_owned, &password_hash)
-        })
-        .await
-        .map_err(|e| Error::new(format!("password verification failed: {e}")))?;
+        let verified =
+            tokio::task::spawn_blocking(move || verify_password(&password_owned, &password_hash))
+                .await
+                .map_err(|e| Error::new(format!("password verification failed: {e}")))?;
         if !verified {
             return Err(Error::new("invalid email or password"));
         }

@@ -47,6 +47,14 @@ fn creds_from_load(row: user_queries::LoadByEmailBorrowed<'_>) -> UserCredential
     }
 }
 
+fn user_from_load_by_id(row: user_queries::LoadByIdBorrowed<'_>) -> User {
+    User {
+        id: row.id,
+        email: row.email.to_owned(),
+        created_at: row.created_at,
+    }
+}
+
 fn map_unique_violation(e: tokio_postgres::Error) -> crate::Error {
     if let Some(db) = e.as_db_error() {
         if db.constraint() == Some("users_email_key") {
@@ -75,6 +83,19 @@ pub async fn load_by_email(
     match user_queries::load_by_email()
         .bind(&client, &email)
         .map(creds_from_load)
+        .opt()
+        .await?
+    {
+        Some(u) => Ok(u),
+        None => Err(crate::Error::NoRecordFound),
+    }
+}
+
+pub async fn load_by_id(id: Uuid, db_pool: &crate::DbPool) -> Result<User, crate::Error> {
+    let client = db_pool.get().await?;
+    match user_queries::load_by_id()
+        .bind(&client, &id)
+        .map(user_from_load_by_id)
         .opt()
         .await?
     {
