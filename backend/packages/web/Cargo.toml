@@ -13,6 +13,8 @@ anyhow = "1.0"
 axum = { version = "0.8", features = ["macros"] }
 todoapp_graphql-config = { path = "../config" }
 todoapp_graphql-db = { path = "../db" }
+todoapp_graphql-jwt-jsonwebtoken = { path = "../jwt_jsonwebtoken" }
+todoapp_graphql-jwt-port = { path = "../jwt_port" }
 todoapp_graphql-refresh-token-port = { path = "../refresh_token_port" }
 todoapp_graphql-redis = { path = "../redis" }
 serde = { version = "1.0", features = ["derive"] }

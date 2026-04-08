@@ -3201,6 +3201,8 @@ dependencies = [
  "thiserror",
  "todoapp_graphql-config",
  "todoapp_graphql-db",
+ "todoapp_graphql-jwt-jsonwebtoken",
+ "todoapp_graphql-jwt-port",
  "todoapp_graphql-redis",
  "todoapp_graphql-refresh-token-port",
  "tokio",

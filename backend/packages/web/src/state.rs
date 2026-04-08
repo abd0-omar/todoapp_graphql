@@ -1,15 +1,26 @@
 use std::sync::Arc;
+
 use todoapp_graphql_config::Config;
 use todoapp_graphql_db::{connect_pool, DbPool};
+use todoapp_graphql_jwt_jsonwebtoken::Hs256JwtService;
+use todoapp_graphql_jwt_port::JwtAuthPort;
 use todoapp_graphql_redis::{connection_manager, RedisRefreshTokenStore};
 use todoapp_graphql_refresh_token_port::RefreshTokenStore;
+
+use crate::graphql::{build_schema, AppSchema};
 
 /// The application's state that is available in [`crate::controllers`] and [`crate::middlewares`].
 pub struct AppState {
     /// The database pool that's used to get a connection to the application's database (see [`todoapp_graphql_db::DbPool`]).
     pub db_pool: DbPool,
-    /// When [`todoapp_graphql_config::Config::redis`] is set, a Redis-backed refresh token store; otherwise `None`.
+    /// Redis-backed refresh token store.
     pub refresh_tokens: Arc<dyn RefreshTokenStore>,
+    /// JWT access-token issue and verification.
+    pub jwt: Arc<dyn JwtAuthPort>,
+    /// TTL (seconds) for newly issued access tokens (e.g. login/signup).
+    pub jwt_access_token_ttl_secs: u64,
+    /// GraphQL schema (shared across requests).
+    pub graphql_schema: AppSchema,
 }
 
 /// The application's state as it is shared across the application, e.g. in controllers and middlewares.
@@ -32,8 +43,20 @@ pub async fn init_app_state(config: Config) -> AppState {
         Arc::new(RedisRefreshTokenStore::new(mgr)) as Arc<dyn RefreshTokenStore>
     };
 
+    let jwt: Arc<dyn JwtAuthPort> = Arc::new(Hs256JwtService::new(
+        config.jwt.secret.as_bytes(),
+        config.jwt.issuer.clone(),
+        config.jwt.audience.clone(),
+    ));
+
+    let jwt_access_token_ttl_secs = config.jwt.access_token_ttl_secs;
+    let graphql_schema = build_schema(db_pool.clone());
+
     AppState {
         db_pool,
         refresh_tokens,
+        jwt,
+        jwt_access_token_ttl_secs,
+        graphql_schema,
     }
 }

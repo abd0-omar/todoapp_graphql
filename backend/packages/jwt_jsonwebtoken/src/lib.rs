@@ -8,6 +8,10 @@ const JWT_ALG: jsonwebtoken::Algorithm = jsonwebtoken::Algorithm::HS256;
 struct Claims {
     sub: String,
     exp: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    iss: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    aud: Option<String>,
 }
 
 /// HMAC-SHA256 JWT issue/verify using a shared secret.
@@ -15,6 +19,8 @@ pub struct Hs256JwtService {
     decode_key: DecodingKey,
     encode_key: EncodingKey,
     validation: Validation,
+    issuer: Option<String>,
+    audience: Option<String>,
 }
 
 impl Hs256JwtService {
@@ -32,6 +38,8 @@ impl Hs256JwtService {
             decode_key: DecodingKey::from_secret(secret),
             encode_key: EncodingKey::from_secret(secret),
             validation,
+            issuer,
+            audience,
         }
     }
 }
@@ -59,6 +67,8 @@ impl JwtAuthPort for Hs256JwtService {
         let claims = Claims {
             sub: subject.to_string(),
             exp,
+            iss: self.issuer.clone(),
+            aud: self.audience.clone(),
         };
         let header = Header::new(JWT_ALG);
         encode(&header, &claims, &self.encode_key)
