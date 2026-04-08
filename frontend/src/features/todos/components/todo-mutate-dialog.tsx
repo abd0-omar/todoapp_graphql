@@ -165,7 +165,8 @@ export function TodoMutateDialog({
                 />
               </FormControl>
               <FormDescription>
-                Separate tags with commas. Empty values will be ignored.
+                Separate tags with commas. Empty or repeated tags will be
+                cleaned up automatically.
               </FormDescription>
             </FormItem>
           </form>
