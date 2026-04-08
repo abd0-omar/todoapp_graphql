@@ -1,21 +1,43 @@
-import { graphqlRequest } from '@/lib/graphql-client'
-
-export type Todo = {
-  id: string
-  title: string
-  description: string
-  tags: string[]
-  isCompleted: boolean
-  createdAt: string
-  updatedAt: string
-}
+import { z } from 'zod'
+import { GraphQLRequestError, graphqlRequest } from '@/lib/graphql-client'
+import { todoInputSchema, todoSchema, type Todo, type TodoInput } from '../schema'
 
 type TodosQueryResponse = {
   todos: Todo[]
 }
 
+type CreateTodoMutationResponse = {
+  createTodo: Todo
+}
+
+type CreateTodoMutationVariables = {
+  input: TodoInput
+}
+
+type UpdateTodoMutationResponse = {
+  updateTodo: Todo | null
+}
+
+type UpdateTodoMutationVariables = {
+  id: string
+  input: TodoInput
+}
+
+const todosQueryResponseSchema = z.object({
+  todos: z.array(todoSchema),
+})
+
+const createTodoMutationResponseSchema = z.object({
+  createTodo: todoSchema,
+})
+
+const updateTodoMutationResponseSchema = z.object({
+  updateTodo: todoSchema.nullable(),
+})
+
 export const todoKeys = {
   all: ['todos'] as const,
+  detail: (id: string) => ['todos', id] as const,
 }
 
 export const TODO_FIELDS = `
@@ -40,5 +62,56 @@ export async function getTodos(signal?: AbortSignal) {
     signal,
   })
 
-  return data.todos
+  return todosQueryResponseSchema.parse(data).todos
 }
+
+export async function createTodo(input: TodoInput) {
+  const parsedInput = todoInputSchema.parse(input)
+  const data = await graphqlRequest<
+    CreateTodoMutationResponse,
+    CreateTodoMutationVariables
+  >({
+    query: `
+      mutation CreateTodo($input: TodoInput!) {
+        createTodo(input: $input) {
+          ${TODO_FIELDS}
+        }
+      }
+    `,
+    variables: {
+      input: parsedInput,
+    },
+  })
+
+  return createTodoMutationResponseSchema.parse(data).createTodo
+}
+
+export async function updateTodo(id: string, input: TodoInput) {
+  const parsedInput = todoInputSchema.parse(input)
+  const data = await graphqlRequest<
+    UpdateTodoMutationResponse,
+    UpdateTodoMutationVariables
+  >({
+    query: `
+      mutation UpdateTodo($id: UUID!, $input: TodoInput!) {
+        updateTodo(id: $id, input: $input) {
+          ${TODO_FIELDS}
+        }
+      }
+    `,
+    variables: {
+      id,
+      input: parsedInput,
+    },
+  })
+
+  const updatedTodo = updateTodoMutationResponseSchema.parse(data).updateTodo
+
+  if (!updatedTodo) {
+    throw new GraphQLRequestError('Todo not found.', { status: 404 })
+  }
+
+  return updatedTodo
+}
+
+export type { Todo, TodoInput } from '../schema'
