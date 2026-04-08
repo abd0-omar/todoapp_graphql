@@ -12,6 +12,7 @@ Create a simple todo app using the following technologies:
 ## Requirements
 
 - The app should be able to create, read, update and delete todos.
+- Postgres database should be running in a docker container.
 
 # Task 2 (type-checked database queries)
 
@@ -46,3 +47,14 @@ Generate migrations from the schema using: [atlas](https://github.com/arigaio/at
 - Use `atlas` to generate sql migrations from the schema.
 - Add new database query for the `tags` field.
 - Expose `tags` field in the GraphQL schema.
+
+# Task 5 (Run server and postgres database container in one command)
+
+## Description
+
+Use [mprocs](https://github.com/pvolok/mprocs).
+
+## Requirements
+
+- stop the docker container (if it's running).
+- run the server and postgres database container in one command.

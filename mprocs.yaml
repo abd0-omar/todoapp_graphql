@@ -1,0 +1,5 @@
+procs:
+  rust:
+    cmd: ["cargo", "run"]
+  postgres:
+    cmd: ["docker", "compose", "up", "-d"]
