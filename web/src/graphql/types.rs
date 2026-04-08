@@ -34,6 +34,7 @@ pub struct TodoInput {
     pub title: String,
     pub description: String,
     pub is_completed: bool,
+    pub tags: Option<Vec<String>>,
 }
 
 impl From<TodoInput> for todoapp_graphql_db::entities::todos::TodoChangeset {
@@ -42,6 +43,7 @@ impl From<TodoInput> for todoapp_graphql_db::entities::todos::TodoChangeset {
             title: input.title,
             description: input.description,
             is_completed: input.is_completed,
+            tags: input.tags,
         }
     }
 }

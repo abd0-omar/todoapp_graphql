@@ -22,6 +22,9 @@ pub struct TodoChangeset {
     pub title: String,
     pub description: String,
     pub is_completed: bool,
+    /// On create: `None` yields an empty tag list. On update: `None` leaves tags unchanged.
+    #[serde(default)]
+    pub tags: Option<Vec<String>>,
 }
 
 fn todo_from_load_all(todo: todo_queries::LoadAllBorrowed<'_>) -> Todo {
@@ -72,6 +75,18 @@ fn todo_from_update(todo: todo_queries::UpdateBorrowed<'_>) -> Todo {
     }
 }
 
+fn todo_from_update_including_tags(todo: todo_queries::UpdateIncludingTagsBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
+}
+
 fn todo_from_update_tags(todo: todo_queries::UpdateTagsBorrowed<'_>) -> Todo {
     Todo {
         id: todo.id,
@@ -109,8 +124,15 @@ pub async fn load(id: Uuid, db_pool: &crate::DbPool) -> Result<Todo, crate::Erro
 pub async fn create(todo: TodoChangeset, db_pool: &crate::DbPool) -> Result<Todo, crate::Error> {
     let client = db_pool.get().await?;
     todo.validate()?;
+    let tags = todo.tags.as_ref().cloned().unwrap_or_default();
     Ok(todo_queries::create()
-        .bind(&client, &todo.title, &todo.description, &todo.is_completed)
+        .bind(
+            &client,
+            &todo.title,
+            &todo.description,
+            &todo.is_completed,
+            &tags,
+        )
         .map(todo_from_create)
         .one()
         .await?)
@@ -123,18 +145,36 @@ pub async fn update(
 ) -> Result<Todo, crate::Error> {
     let client = db_pool.get().await?;
     todo.validate()?;
-    match todo_queries::update()
-        .bind(
-            &client,
-            &todo.title,
-            &todo.description,
-            &todo.is_completed,
-            &id,
-        )
-        .map(todo_from_update)
-        .opt()
-        .await?
-    {
+    let opt = match &todo.tags {
+        None => {
+            todo_queries::update()
+                .bind(
+                    &client,
+                    &todo.title,
+                    &todo.description,
+                    &todo.is_completed,
+                    &id,
+                )
+                .map(todo_from_update)
+                .opt()
+                .await?
+        }
+        Some(tags) => {
+            todo_queries::update_including_tags()
+                .bind(
+                    &client,
+                    &todo.title,
+                    &todo.description,
+                    &todo.is_completed,
+                    tags,
+                    &id,
+                )
+                .map(todo_from_update_including_tags)
+                .opt()
+                .await?
+        }
+    };
+    match opt {
         Some(todo) => Ok(todo),
         None => Err(crate::Error::NoRecordFound),
     }
