@@ -117,6 +117,9 @@ pub struct JwtConfig {
     /// Access token time-to-live in seconds. Env: `APP_JWT__ACCESS_TOKEN_TTL_SECS`. Default: 3600.
     #[serde(default = "default_jwt_access_token_ttl_secs")]
     pub access_token_ttl_secs: u64,
+    /// Opaque refresh token TTL in Redis (seconds). Env: `APP_JWT__REFRESH_TOKEN_TTL_SECS`. Default: 604800 (7d).
+    #[serde(default = "default_jwt_refresh_token_ttl_secs")]
+    pub refresh_token_ttl_secs: u64,
     /// Optional issuer (`iss`) claim validation on verify and set on sign. Env: `APP_JWT__ISSUER`.
     pub issuer: Option<String>,
     /// Optional audience (`aud`) claim validation on verify and set on sign. Env: `APP_JWT__AUDIENCE`.
@@ -125,6 +128,10 @@ pub struct JwtConfig {
 
 fn default_jwt_access_token_ttl_secs() -> u64 {
     3600
+}
+
+fn default_jwt_refresh_token_ttl_secs() -> u64 {
+    604800
 }
 
 /// Loads the application configuration for a particular environment.
@@ -301,6 +308,7 @@ mod tests {
                     jwt: JwtConfig {
                         secret: String::from("test-jwt-secret-at-least-32-chars!!"),
                         access_token_ttl_secs: 3600,
+                        refresh_token_ttl_secs: 604800,
                         issuer: None,
                         audience: None,
                     },
@@ -356,6 +364,7 @@ mod tests {
                     jwt: JwtConfig {
                         secret: String::from("test-jwt-secret-at-least-32-chars!!"),
                         access_token_ttl_secs: 3600,
+                        refresh_token_ttl_secs: 604800,
                         issuer: None,
                         audience: None,
                     },
@@ -411,6 +420,7 @@ mod tests {
                     jwt: JwtConfig {
                         secret: String::from("test-jwt-secret-at-least-32-chars!!"),
                         access_token_ttl_secs: 3600,
+                        refresh_token_ttl_secs: 604800,
                         issuer: None,
                         audience: None,
                     },
