@@ -4,6 +4,7 @@ members = [
     "packages/config",
     "packages/db",
     "packages/db_queries",
+    "packages/jwt_jsonwebtoken",
     "packages/jwt_port",
     "packages/refresh_token_port",
     "packages/redis",
