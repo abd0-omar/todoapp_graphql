@@ -1,6 +1,15 @@
 procs:
   rust:
-    cmd: ["cargo", "run"]
+    shell: |
+      export APP_DATABASE__URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+      export DATABASE_URL="${APP_DATABASE__URL}"
+      exec bacon --job run
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: todoapp_graphql
+      DB_PASSWORD: todoapp_graphql
+      DB_NAME: todoapp_graphql
   postgres:
     cmd:
       - sh

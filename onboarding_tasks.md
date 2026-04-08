@@ -56,9 +56,9 @@ Use [mprocs](https://github.com/pvolok/mprocs).
 
 ## Requirements
 
-- stop the docker container (if it's running).
-- run the server and postgres database container in one command.
+- the server should be run in cargo watch mode.
 - mprocs should be able to run/start/attach the docker container.
     - run, if the container doesn't exist yet.
     - start, if it exists but is stopped.
     - attach, if it's already running.
+- the server and postgres database container should be started in one command.
