@@ -32,7 +32,7 @@ pub async fn run() -> anyhow::Result<()> {
     let env = get_env().context("Cannot get environment!")?;
     let config: Config = load_config(&env).context("Cannot load config!")?;
 
-    let app_state = state::init_app_state(config.clone()).await;
+    let app_state = std::sync::Arc::new(state::init_app_state(config.clone()).await);
     let app = routes::init_routes(app_state);
 
     let addr = config.server.addr();
