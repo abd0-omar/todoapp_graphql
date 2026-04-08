@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
+import { signUp } from '@/features/auth/api/auth'
+import { GraphQLRequestError } from '@/lib/graphql-client'
+import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,7 +31,7 @@ const formSchema = z
     password: z
       .string()
       .min(1, 'Please enter your password')
-      .min(7, 'Password must be at least 7 characters long'),
+      .min(8, 'Password must be at least 8 characters long'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -33,11 +39,18 @@ const formSchema = z
     path: ['confirmPassword'],
   })
 
+interface SignUpFormProps extends React.HTMLAttributes<HTMLFormElement> {
+  redirectTo?: string
+}
+
 export function SignUpForm({
   className,
+  redirectTo,
   ...props
-}: React.HTMLAttributes<HTMLFormElement>) {
+}: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,14 +61,27 @@ export function SignUpForm({
     },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
-
-    setTimeout(() => {
+    try {
+      const payload = await signUp({
+        email: data.email.trim(),
+        password: data.password,
+      })
+      auth.setAccessToken(payload.accessToken)
+      auth.setUser({ id: payload.user.id, email: payload.user.email })
+      toast.success(`Account created for ${payload.user.email}.`)
+      const targetPath = redirectTo || '/'
+      navigate({ to: targetPath, replace: true })
+    } catch (error) {
+      if (error instanceof GraphQLRequestError) {
+        toast.error(error.errors?.[0]?.message ?? error.message)
+      } else {
+        toast.error('Something went wrong. Please try again.')
+      }
+    } finally {
       setIsLoading(false)
-    }, 3000)
+    }
   }
 
   return (
@@ -105,6 +131,9 @@ export function SignUpForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className='animate-spin' />
+          ) : null}
           Create Account
         </Button>
 
