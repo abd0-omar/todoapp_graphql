@@ -71,6 +71,8 @@ pub enum Error {
     /// `Error::NoRecordFound` does not. It merely represents an expected "not found" result.
     #[error("no record found")]
     NoRecordFound,
+    #[error("email already registered")]
+    DuplicateEmail,
     #[error("validation failed")]
     /// An invalid changeset was passed to a writing operation such as creating or updating a record.
     ValidationError(#[from] validator::ValidationErrors),
