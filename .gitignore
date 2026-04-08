@@ -7,4 +7,6 @@
 # Editors
 .idea
 .vscode/
+
 mprocs.log
+.env

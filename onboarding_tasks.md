@@ -56,9 +56,11 @@ Use [mprocs](https://github.com/pvolok/mprocs).
 
 ## Requirements
 
-- the server should be run in cargo watch mode.
+- Add a `Makefile` with all DB settings, exported so mprocs sees them.
+- The server should be run in cargo watch mode.
 - mprocs should be able to run/start/attach the docker container.
     - run, if the container doesn't exist yet.
     - start, if it exists but is stopped.
     - attach, if it's already running.
-- the server and postgres database container should be started in one command.
+- The server and postgres database container should be started in one command
+  with `make start`.

@@ -1,21 +1,19 @@
 procs:
   rust:
     shell: |
-      export APP_DATABASE__URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-      export DATABASE_URL="${APP_DATABASE__URL}"
+      : "${DATABASE_URL}"
       exec bacon --job run
-    env:
-      DB_HOST: localhost
-      DB_PORT: "5432"
-      DB_USER: todoapp_graphql
-      DB_PASSWORD: todoapp_graphql
-      DB_NAME: todoapp_graphql
   postgres:
     cmd:
       - sh
       - -c
       - |
-        name=todoapp_graphql_postgres
+        : "${POSTGRES_CONTAINER_NAME}"
+        : "${POSTGRES_USER}"
+        : "${POSTGRES_PASSWORD}"
+        : "${POSTGRES_DB}"
+        : "${POSTGRES_PORT}"
+        name="$POSTGRES_CONTAINER_NAME"
         if docker container inspect "$name" >/dev/null 2>&1; then
           if [ "$(docker inspect -f '{{.State.Running}}' "$name")" = true ]; then
             exec docker attach "$name"
@@ -24,9 +22,9 @@ procs:
           fi
         else
           exec docker run --name "$name" \
-            -e POSTGRES_PASSWORD=todoapp_graphql \
-            -e POSTGRES_USER=todoapp_graphql \
-            -e POSTGRES_DB=todoapp_graphql \
-            -p 5432:5432 \
+            -e "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" \
+            -e "POSTGRES_USER=${POSTGRES_USER}" \
+            -e "POSTGRES_DB=${POSTGRES_DB}" \
+            -p "${POSTGRES_PORT}:5432" \
             postgres
         fi
