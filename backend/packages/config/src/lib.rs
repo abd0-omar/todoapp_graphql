@@ -25,6 +25,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     /// Redis (e.g. refresh token store). Set via `[redis]` in TOML or `APP_REDIS__URL`.
     pub redis: RedisConfig,
+    /// JWT access tokens (HS256). Set via `[jwt]` in TOML or `APP_JWT__SECRET`, `APP_JWT__ACCESS_TOKEN_TTL_SECS`, `APP_JWT__ISSUER`, `APP_JWT__AUDIENCE`.
+    pub jwt: JwtConfig,
 }
 
 /// The server configuration.
@@ -104,6 +106,25 @@ pub struct DatabaseConfig {
 pub struct RedisConfig {
     /// Redis URL, e.g. `redis://127.0.0.1:6379`
     pub url: String,
+}
+
+/// JWT signing and validation settings (symmetric secret).
+#[derive(Deserialize, Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct JwtConfig {
+    /// HMAC secret (must be strong in production). Env: `APP_JWT__SECRET`.
+    pub secret: String,
+    /// Access token time-to-live in seconds. Env: `APP_JWT__ACCESS_TOKEN_TTL_SECS`. Default: 3600.
+    #[serde(default = "default_jwt_access_token_ttl_secs")]
+    pub access_token_ttl_secs: u64,
+    /// Optional issuer (`iss`) claim validation on verify and set on sign. Env: `APP_JWT__ISSUER`.
+    pub issuer: Option<String>,
+    /// Optional audience (`aud`) claim validation on verify and set on sign. Env: `APP_JWT__AUDIENCE`.
+    pub audience: Option<String>,
+}
+
+fn default_jwt_access_token_ttl_secs() -> u64 {
+    3600
 }
 
 /// Loads the application configuration for a particular environment.
@@ -232,6 +253,7 @@ mod tests {
         pub server: ServerConfig,
         pub database: DatabaseConfig,
         pub redis: RedisConfig,
+        pub jwt: JwtConfig,
         pub app_setting: String,
     }
 
@@ -259,6 +281,8 @@ mod tests {
                 "APP_DATABASE__URL",
                 "postgresql://user:pass@localhost:5432/my_app",
             );
+            jail.set_env("APP_REDIS__URL", "redis://127.0.0.1:6379");
+            jail.set_env("APP_JWT__SECRET", "test-jwt-secret-at-least-32-chars!!");
             let config = load_config::<Config>(&Environment::Development).unwrap();
 
             assert_that!(
@@ -273,6 +297,12 @@ mod tests {
                     },
                     redis: RedisConfig {
                         url: String::from("redis://127.0.0.1:6379"),
+                    },
+                    jwt: JwtConfig {
+                        secret: String::from("test-jwt-secret-at-least-32-chars!!"),
+                        access_token_ttl_secs: 3600,
+                        issuer: None,
+                        audience: None,
                     },
                     app_setting: String::from("override!"),
                 })
@@ -306,6 +336,8 @@ mod tests {
                 "APP_DATABASE__URL",
                 "postgresql://user:pass@localhost:5432/my_app",
             );
+            jail.set_env("APP_REDIS__URL", "redis://127.0.0.1:6379");
+            jail.set_env("APP_JWT__SECRET", "test-jwt-secret-at-least-32-chars!!");
             let config = load_config::<Config>(&Environment::Test).unwrap();
 
             assert_that!(
@@ -320,6 +352,12 @@ mod tests {
                     },
                     redis: RedisConfig {
                         url: String::from("redis://127.0.0.1:6379"),
+                    },
+                    jwt: JwtConfig {
+                        secret: String::from("test-jwt-secret-at-least-32-chars!!"),
+                        access_token_ttl_secs: 3600,
+                        issuer: None,
+                        audience: None,
                     },
                     app_setting: String::from("override!"),
                 })
@@ -353,6 +391,8 @@ mod tests {
                 "APP_DATABASE__URL",
                 "postgresql://user:pass@localhost:5432/my_app",
             );
+            jail.set_env("APP_REDIS__URL", "redis://127.0.0.1:6379");
+            jail.set_env("APP_JWT__SECRET", "test-jwt-secret-at-least-32-chars!!");
             let config = load_config::<Config>(&Environment::Production).unwrap();
 
             assert_that!(
@@ -367,6 +407,12 @@ mod tests {
                     },
                     redis: RedisConfig {
                         url: String::from("redis://127.0.0.1:6379"),
+                    },
+                    jwt: JwtConfig {
+                        secret: String::from("test-jwt-secret-at-least-32-chars!!"),
+                        access_token_ttl_secs: 3600,
+                        issuer: None,
+                        audience: None,
                     },
                     app_setting: String::from("override!"),
                 })
