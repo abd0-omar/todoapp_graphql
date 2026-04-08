@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Monitor,
   Bug,
+  CheckCheck,
   ListTodo,
   FileX,
   HelpCircle,
@@ -61,6 +62,11 @@ export const sidebarData: SidebarData = {
           title: 'Tasks',
           url: '/tasks',
           icon: ListTodo,
+        },
+        {
+          title: 'Todos',
+          url: '/todos',
+          icon: CheckCheck,
         },
         {
           title: 'Apps',
