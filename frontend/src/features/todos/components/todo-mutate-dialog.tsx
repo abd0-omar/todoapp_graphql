@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -23,7 +23,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { todoInputSchema, type Todo, type TodoInput } from '../schema'
+import {
+  normalizeTags,
+  todoInputSchema,
+  type Todo,
+  type TodoInput,
+} from '../schema'
 
 type TodoMutateDialogProps = {
   open: boolean
@@ -41,6 +46,7 @@ export function TodoMutateDialog({
   isPending = false,
 }: TodoMutateDialogProps) {
   const isEdit = !!currentTodo
+  const [tagsText, setTagsText] = useState('')
   const form = useForm<TodoInput>({
     resolver: zodResolver(todoInputSchema),
     defaultValues: getDefaultValues(currentTodo),
@@ -48,12 +54,14 @@ export function TodoMutateDialog({
 
   useEffect(() => {
     form.reset(getDefaultValues(currentTodo))
+    setTagsText(formatTagsForInput(currentTodo?.tags ?? []))
   }, [
     form,
     currentTodo?.id,
     currentTodo?.title,
     currentTodo?.description,
     currentTodo?.isCompleted,
+    currentTodo?.tags,
     open,
   ])
 
@@ -78,7 +86,12 @@ export function TodoMutateDialog({
         <Form {...form}>
           <form
             id='todo-form'
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit((values) =>
+              onSubmit({
+                ...values,
+                tags: normalizeTags(tagsText.split(',')),
+              })
+            )}
             className='space-y-4'
           >
             <FormField
@@ -140,6 +153,21 @@ export function TodoMutateDialog({
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <FormControl>
+                <Input
+                  value={tagsText}
+                  onChange={(event) => setTagsText(event.target.value)}
+                  placeholder='work, urgent, backend'
+                  autoComplete='off'
+                />
+              </FormControl>
+              <FormDescription>
+                Separate tags with commas. Empty values will be ignored.
+              </FormDescription>
+            </FormItem>
           </form>
         </Form>
 
@@ -177,4 +205,8 @@ function getDefaultValues(todo?: Todo): TodoInput {
     isCompleted: todo?.isCompleted ?? false,
     tags: todo?.tags ?? [],
   }
+}
+
+function formatTagsForInput(tags: string[]) {
+  return tags.join(', ')
 }
