@@ -28,3 +28,21 @@ procs:
             -p "${POSTGRES_PORT}:5432" \
             postgres
         fi
+  redis:
+    cmd:
+      - sh
+      - -c
+      - |
+        : "${REDIS_CONTAINER_NAME}"
+        : "${REDIS_PORT}"
+        : "${REDIS_IMAGE}"
+        name="$REDIS_CONTAINER_NAME"
+        if docker container inspect "$name" >/dev/null 2>&1; then
+          if [ "$(docker inspect -f '{{.State.Running}}' "$name")" = true ]; then
+            exec docker attach "$name"
+          else
+            exec docker start -a "$name"
+          fi
+        else
+          exec docker run --name "$name" -p "${REDIS_PORT}:6379" "$REDIS_IMAGE"
+        fi

@@ -23,7 +23,8 @@ pub struct Config {
     pub server: ServerConfig,
     /// the database configuration: [`DatabaseConfig`]
     pub database: DatabaseConfig,
-    // add your config settings here…
+    /// Redis (e.g. refresh token store). Set via `[redis]` in TOML or `APP_REDIS__URL`.
+    pub redis: RedisConfig,
 }
 
 /// The server configuration.
@@ -94,6 +95,14 @@ impl ServerConfig {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct DatabaseConfig {
     /// The URL to use to connect to the database, e.g. "postgresql://user:password@localhost:5432/database"
+    pub url: String,
+}
+
+/// Redis connection settings.
+#[derive(Deserialize, Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub struct RedisConfig {
+    /// Redis URL, e.g. `redis://127.0.0.1:6379`
     pub url: String,
 }
 
@@ -222,7 +231,7 @@ mod tests {
     pub struct Config {
         pub server: ServerConfig,
         pub database: DatabaseConfig,
-
+        pub redis: RedisConfig,
         pub app_setting: String,
     }
 
@@ -261,6 +270,9 @@ mod tests {
                     },
                     database: DatabaseConfig {
                         url: String::from("postgresql://user:pass@localhost:5432/my_app"),
+                    },
+                    redis: RedisConfig {
+                        url: String::from("redis://127.0.0.1:6379"),
                     },
                     app_setting: String::from("override!"),
                 })
@@ -306,6 +318,9 @@ mod tests {
                     database: DatabaseConfig {
                         url: String::from("postgresql://user:pass@localhost:5432/my_app"),
                     },
+                    redis: RedisConfig {
+                        url: String::from("redis://127.0.0.1:6379"),
+                    },
                     app_setting: String::from("override!"),
                 })
             );
@@ -349,6 +364,9 @@ mod tests {
                     },
                     database: DatabaseConfig {
                         url: String::from("postgresql://user:pass@localhost:5432/my_app"),
+                    },
+                    redis: RedisConfig {
+                        url: String::from("redis://127.0.0.1:6379"),
                     },
                     app_setting: String::from("override!"),
                 })
