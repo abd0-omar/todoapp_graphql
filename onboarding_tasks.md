@@ -64,3 +64,15 @@ Use [mprocs](https://github.com/pvolok/mprocs).
     - attach, if it's already running.
 - The server and postgres database container should be started in one command
   with `make start`.
+
+# Task 6 (Makefile `dal`: Atlas diff to Refinery migrations)
+
+## Description
+
+Add a Makefile command `dal` (data access layer) that uses `atlas` migration diffs into the `refinery` migration folder.
+
+## Requirements
+
+- It will run `atlas` to create a migration diffs.
+- Copy the file created by `atlas` to the `refinery` folder.
+- Rename the file to match `refinery` format.
