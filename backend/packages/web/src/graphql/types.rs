@@ -68,10 +68,33 @@ pub struct GqlUser {
     pub email: String,
 }
 
+/// Access and refresh token TTLs in seconds (GraphQL context).
+#[derive(Clone, Copy)]
+pub struct AuthTtls {
+    pub access_token_secs: u64,
+    pub refresh_token_secs: u64,
+}
+
 /// JWT and user returned from auth mutations.
 #[derive(SimpleObject)]
 pub struct AuthPayload {
     #[graphql(name = "accessToken")]
     pub access_token: String,
+    #[graphql(name = "refreshToken")]
+    pub refresh_token: String,
     pub user: GqlUser,
+}
+
+/// Refresh an access token using an opaque refresh token from Redis.
+#[derive(InputObject)]
+pub struct RefreshTokenInput {
+    #[graphql(name = "refreshToken")]
+    pub refresh_token: String,
+}
+
+/// Revoke a refresh token in Redis (logout).
+#[derive(InputObject)]
+pub struct LogoutInput {
+    #[graphql(name = "refreshToken")]
+    pub refresh_token: String,
 }

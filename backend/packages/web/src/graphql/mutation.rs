@@ -8,11 +8,15 @@ use todoapp_graphql_db::entities::users::UserChangeset;
 use todoapp_graphql_db::entities::{todos, users as user_entity};
 use todoapp_graphql_db::DbPool;
 use todoapp_graphql_jwt_port::JwtAuthPort;
+use todoapp_graphql_refresh_token_port::RefreshTokenStore;
 use tracing::info;
 use uuid::Uuid;
 
 use super::auth::require_user;
-use super::types::{AuthPayload, GqlUser, LoginInput, SignUpInput, Todo, TodoInput};
+use super::types::{
+    AuthPayload, AuthTtls, GqlUser, LoginInput, LogoutInput, RefreshTokenInput, SignUpInput,
+    Todo, TodoInput,
+};
 
 pub struct MutationRoot;
 
@@ -49,7 +53,8 @@ impl MutationRoot {
         let password_owned = password.expose_secret().to_string();
         let pool = ctx.data::<DbPool>()?;
         let jwt = ctx.data::<Arc<dyn JwtAuthPort>>()?.clone();
-        let ttl = *ctx.data::<u64>()?;
+        let ttls = *ctx.data::<AuthTtls>()?;
+        let store = ctx.data::<Arc<dyn RefreshTokenStore>>()?.clone();
         let hash = tokio::task::spawn_blocking(move || hash_password(&password_owned))
             .await
             .map_err(|e| Error::new(format!("password hashing failed: {e}")))??;
@@ -65,10 +70,20 @@ impl MutationRoot {
             Err(e) => return Err(e.into()),
         };
         let access_token = jwt
-            .sign_access_token(&user.id.to_string(), ttl)
+            .sign_access_token(&user.id.to_string(), ttls.access_token_secs)
             .map_err(|e| Error::new(format!("{e}")))?;
+        let refresh_token = Uuid::new_v4().to_string();
+        store
+            .store(
+                &refresh_token,
+                &user.id.to_string(),
+                ttls.refresh_token_secs,
+            )
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
         Ok(AuthPayload {
             access_token,
+            refresh_token,
             user: GqlUser {
                 id: user.id,
                 email: user.email,
@@ -82,7 +97,8 @@ impl MutationRoot {
         ensure_password_strength(password.expose_secret())?;
         let pool = ctx.data::<DbPool>()?;
         let jwt = ctx.data::<Arc<dyn JwtAuthPort>>()?.clone();
-        let ttl = *ctx.data::<u64>()?;
+        let ttls = *ctx.data::<AuthTtls>()?;
+        let store = ctx.data::<Arc<dyn RefreshTokenStore>>()?.clone();
         let email = input.email.trim().to_lowercase();
         let creds = match user_entity::load_by_email(&email, pool).await {
             Ok(c) => c,
@@ -101,15 +117,99 @@ impl MutationRoot {
             return Err(Error::new("invalid email or password"));
         }
         let access_token = jwt
-            .sign_access_token(&creds.id.to_string(), ttl)
+            .sign_access_token(&creds.id.to_string(), ttls.access_token_secs)
             .map_err(|e| Error::new(format!("{e}")))?;
+        let refresh_token = Uuid::new_v4().to_string();
+        store
+            .store(
+                &refresh_token,
+                &creds.id.to_string(),
+                ttls.refresh_token_secs,
+            )
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
         Ok(AuthPayload {
             access_token,
+            refresh_token,
             user: GqlUser {
                 id: creds.id,
                 email: creds.email,
             },
         })
+    }
+
+    /// Exchange a valid refresh token for new access and refresh tokens (rotation).
+    #[graphql(name = "refreshToken")]
+    async fn refresh_token(&self, ctx: &Context<'_>, input: RefreshTokenInput) -> Result<AuthPayload> {
+        let store = ctx.data::<Arc<dyn RefreshTokenStore>>()?.clone();
+        let pool = ctx.data::<DbPool>()?;
+        let jwt = ctx.data::<Arc<dyn JwtAuthPort>>()?.clone();
+        let ttls = *ctx.data::<AuthTtls>()?;
+        let raw = input.refresh_token.trim();
+        if raw.is_empty() {
+            return Err(Error::new("invalid or expired refresh token"));
+        }
+
+        let subject = store
+            .validate(raw)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+        let Some(user_id_str) = subject else {
+            return Err(Error::new("invalid or expired refresh token"));
+        };
+        let user_id = Uuid::parse_str(user_id_str.trim())
+            .map_err(|_| Error::new("invalid or expired refresh token"))?;
+
+        let user = match user_entity::load_by_id(user_id, pool).await {
+            Ok(u) => u,
+            Err(todoapp_graphql_db::Error::NoRecordFound) => {
+                let _ = store.revoke(raw).await;
+                return Err(Error::new("invalid or expired refresh token"));
+            }
+            Err(e) => return Err(e.into()),
+        };
+
+        store
+            .revoke(raw)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let refresh_token = Uuid::new_v4().to_string();
+        store
+            .store(
+                &refresh_token,
+                &user_id.to_string(),
+                ttls.refresh_token_secs,
+            )
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let access_token = jwt
+            .sign_access_token(&user_id.to_string(), ttls.access_token_secs)
+            .map_err(|e| Error::new(format!("{e}")))?;
+
+        Ok(AuthPayload {
+            access_token,
+            refresh_token,
+            user: GqlUser {
+                id: user.id,
+                email: user.email,
+            },
+        })
+    }
+
+    /// Revoke a refresh token in Redis (logout).
+    async fn logout(&self, ctx: &Context<'_>, input: LogoutInput) -> Result<bool> {
+        let store = ctx.data::<Arc<dyn RefreshTokenStore>>()?.clone();
+        let raw = input.refresh_token.trim();
+        if raw.is_empty() {
+            return Ok(true);
+        }
+        store
+            .revoke(raw)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+        Ok(true)
     }
 
     /// Create a new todo.

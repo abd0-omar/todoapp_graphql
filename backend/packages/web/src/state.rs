@@ -7,7 +7,7 @@ use todoapp_graphql_jwt_port::JwtAuthPort;
 use todoapp_graphql_redis::{connection_manager, RedisRefreshTokenStore};
 use todoapp_graphql_refresh_token_port::RefreshTokenStore;
 
-use crate::graphql::{build_schema, AppSchema};
+use crate::graphql::{build_schema, AppSchema, AuthTtls};
 
 /// The application's state that is available in [`crate::controllers`] and [`crate::middlewares`].
 pub struct AppState {
@@ -50,7 +50,16 @@ pub async fn init_app_state(config: Config) -> AppState {
     ));
 
     let jwt_access_token_ttl_secs = config.jwt.access_token_ttl_secs;
-    let graphql_schema = build_schema(db_pool.clone(), jwt.clone(), jwt_access_token_ttl_secs);
+    let auth_ttls = AuthTtls {
+        access_token_secs: jwt_access_token_ttl_secs,
+        refresh_token_secs: config.jwt.refresh_token_ttl_secs,
+    };
+    let graphql_schema = build_schema(
+        db_pool.clone(),
+        jwt.clone(),
+        auth_ttls,
+        refresh_tokens.clone(),
+    );
 
     AppState {
         db_pool,
