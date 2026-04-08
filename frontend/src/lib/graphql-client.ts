@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios'
+import { useAuthStore } from '@/stores/auth-store'
 
 type GraphQLError = {
   message: string
@@ -15,6 +16,11 @@ type GraphQLRequestOptions<TVariables> = {
   query: string
   variables?: TVariables
   signal?: AbortSignal
+  /**
+   * When true (default), send `Authorization: Bearer` if a token is stored.
+   * Use `false` for `login` / `signUp` so a stale token does not yield HTTP 401.
+   */
+  auth?: boolean
 }
 
 type GraphQLRequestErrorOptions = {
@@ -80,14 +86,28 @@ async function readGraphQLResponse<TData>(response: Response) {
 export async function graphqlRequest<
   TData,
   TVariables extends Record<string, unknown> | undefined = undefined,
->({ query, variables, signal }: GraphQLRequestOptions<TVariables>) {
+>({
+  query,
+  variables,
+  signal,
+  auth = true,
+}: GraphQLRequestOptions<TVariables>) {
   try {
+    const headers: Record<string, string> = {
+      Accept: 'application/graphql-response+json, application/json',
+      'Content-Type': 'application/json',
+    }
+    if (auth) {
+      const raw = useAuthStore.getState().auth.accessToken
+      const token = typeof raw === 'string' ? raw.trim() : ''
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+    }
+
     const response = await fetch(getGraphQLApiUrl(), {
       method: 'POST',
-      headers: {
-        Accept: 'application/graphql-response+json, application/json',
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ query, variables }),
       signal,
     })
