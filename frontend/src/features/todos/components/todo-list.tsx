@@ -36,6 +36,19 @@ export function TodoList({ todos, renderActions }: TodoListProps) {
               <CardTitle className={cn(todo.isCompleted && 'line-through')}>
                 {todo.title}
               </CardTitle>
+              {todo.tags.length > 0 ? (
+                <div className='flex flex-wrap gap-2'>
+                  {todo.tags.map((tag) => (
+                    <Badge
+                      key={`${todo.id}-${tag}`}
+                      variant='secondary'
+                      className='font-normal'
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
               <CardDescription className='text-sm leading-6 whitespace-pre-wrap'>
                 {todo.description || 'No description yet.'}
               </CardDescription>
