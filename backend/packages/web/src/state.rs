@@ -50,7 +50,7 @@ pub async fn init_app_state(config: Config) -> AppState {
     ));
 
     let jwt_access_token_ttl_secs = config.jwt.access_token_ttl_secs;
-    let graphql_schema = build_schema(db_pool.clone());
+    let graphql_schema = build_schema(db_pool.clone(), jwt.clone(), jwt_access_token_ttl_secs);
 
     AppState {
         db_pool,

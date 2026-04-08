@@ -47,3 +47,31 @@ impl From<TodoInput> for todoapp_graphql_db::entities::todos::TodoChangeset {
         }
     }
 }
+
+/// Register a new account.
+#[derive(InputObject)]
+pub struct SignUpInput {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(InputObject)]
+pub struct LoginInput {
+    pub email: String,
+    pub password: String,
+}
+
+/// Public user fields returned after sign-up or login.
+#[derive(SimpleObject, Clone)]
+pub struct GqlUser {
+    pub id: Uuid,
+    pub email: String,
+}
+
+/// JWT and user returned from auth mutations.
+#[derive(SimpleObject)]
+pub struct AuthPayload {
+    #[graphql(name = "accessToken")]
+    pub access_token: String,
+    pub user: GqlUser,
+}

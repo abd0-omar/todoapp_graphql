@@ -10,6 +10,7 @@ doctest = false
 
 [dependencies]
 anyhow = "1.0"
+argon2 = { version = "0.5.3", features = ["password-hash"] }
 axum = { version = "0.8", features = ["macros"] }
 todoapp_graphql-config = { path = "../config" }
 todoapp_graphql-db = { path = "../db" }
@@ -33,3 +34,5 @@ validator = "0.20"
 async-graphql = { version = "7.2.1", features = ["chrono", "uuid"] }
 async-graphql-axum = "7.2.1"
 chrono = { version = "0.4", features = ["serde"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+secrecy = "0.10.3"
