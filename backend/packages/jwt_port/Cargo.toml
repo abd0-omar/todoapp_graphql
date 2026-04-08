@@ -1,0 +1,11 @@
+[package]
+name = "todoapp_graphql-jwt-port"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+thiserror = "2.0.18"

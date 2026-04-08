@@ -3089,6 +3089,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "todoapp_graphql-jwt-port"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "todoapp_graphql-macros"
 version = "0.0.1"
 dependencies = [
