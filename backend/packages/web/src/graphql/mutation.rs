@@ -3,6 +3,7 @@ use todoapp_graphql_db::{entities::todos, DbPool};
 use tracing::info;
 use uuid::Uuid;
 
+use super::auth::require_user;
 use super::types::{Todo, TodoInput};
 
 pub struct MutationRoot;
@@ -11,6 +12,7 @@ pub struct MutationRoot;
 impl MutationRoot {
     /// Create a new todo.
     async fn create_todo(&self, ctx: &Context<'_>, input: TodoInput) -> Result<Todo> {
+        require_user(ctx)?;
         let pool = ctx.data::<DbPool>()?;
         let todo = todos::create(input.into(), pool).await?;
         info!("created todo {:?}", todo);
@@ -24,6 +26,7 @@ impl MutationRoot {
         id: Uuid,
         input: TodoInput,
     ) -> Result<Option<Todo>> {
+        require_user(ctx)?;
         let pool = ctx.data::<DbPool>()?;
         match todos::update(id, input.into(), pool).await {
             Ok(todo) => {
@@ -37,6 +40,7 @@ impl MutationRoot {
 
     /// Delete a todo. Returns true if the todo was deleted, false if it didn't exist.
     async fn delete_todo(&self, ctx: &Context<'_>, id: Uuid) -> Result<bool> {
+        require_user(ctx)?;
         let pool = ctx.data::<DbPool>()?;
         match todos::delete(id, pool).await {
             Ok(()) => {
@@ -55,6 +59,7 @@ impl MutationRoot {
         id: Uuid,
         tags: Vec<String>,
     ) -> Result<Option<Todo>> {
+        require_user(ctx)?;
         let pool = ctx.data::<DbPool>()?;
         match todos::update_tags(id, tags, pool).await {
             Ok(todo) => {
