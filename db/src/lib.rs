@@ -1,12 +1,19 @@
 //! The todoapp_graphql-db crate contains all code related to database access: entities, migrations, functions for validating and reading and writing data.
 
 use anyhow::{Context, Result};
+use refinery::config::Config as RefineryConfig;
 use thiserror::Error;
 use todoapp_graphql_config::DatabaseConfig;
 use todoapp_graphql_db_queries::deadpool_postgres::{
     Config as PoolConfig, Pool, PoolError, Runtime,
 };
 use todoapp_graphql_db_queries::tokio_postgres::{self, NoTls};
+
+mod embedded {
+    use refinery::embed_migrations;
+
+    embed_migrations!("migrations");
+}
 
 pub type DbClient = todoapp_graphql_db_queries::deadpool_postgres::Client;
 pub type DbTransaction<'a> = todoapp_graphql_db_queries::deadpool_postgres::Transaction<'a>;
@@ -69,8 +76,24 @@ pub enum Error {
     ValidationError(#[from] validator::ValidationErrors),
 }
 
+async fn migrate_database(config: &DatabaseConfig) -> Result<()> {
+    let mut refinery_config: RefineryConfig = config
+        .url
+        .parse()
+        .context("Failed to build refinery config from database URL")?;
+
+    embedded::migrations::runner()
+        .run_async(&mut refinery_config)
+        .await
+        .context("Failed to run startup migrations")?;
+
+    Ok(())
+}
+
 /// Creates a connection pool to the database specified in the passed [`todoapp_graphql-config::DatabaseConfig`]
 pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, anyhow::Error> {
+    migrate_database(&config).await?;
+
     let mut pool_config = PoolConfig::new();
     pool_config.url = Some(config.url.clone());
 

@@ -10,6 +10,7 @@ doctest = false
 
 [dependencies]
 anyhow = "1.0"
+refinery = { version = "0.9.0", default-features = false, features = ["tokio-postgres"] }
 todoapp_graphql-config = { path = "../config" }
 todoapp_graphql-db-queries = { path = "../db_queries" }
 serde = { version = "1.0", features = ["derive"] }

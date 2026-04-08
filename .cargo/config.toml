@@ -1,3 +1,2 @@
 [alias]
-db = ["run", "--package", "todoapp_graphql-cli", "--bin", "db", "--"]
 generate = ["run", "--package", "todoapp_graphql-cli", "--bin", "generate", "--"]
