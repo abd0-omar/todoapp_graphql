@@ -13,11 +13,17 @@ pub struct UpdateParams<T1: crate::StringSql, T2: crate::StringSql> {
     pub is_completed: bool,
     pub id: uuid::Uuid,
 }
+#[derive(Debug)]
+pub struct UpdateTagsParams<T1: crate::StringSql, T2: crate::ArraySql<Item = T1>> {
+    pub tags: T2,
+    pub id: uuid::Uuid,
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadAll {
     pub id: uuid::Uuid,
     pub title: String,
     pub description: String,
+    pub tags: Vec<String>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -26,6 +32,7 @@ pub struct LoadAllBorrowed<'a> {
     pub id: uuid::Uuid,
     pub title: &'a str,
     pub description: &'a str,
+    pub tags: crate::ArrayIterator<'a, &'a str>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -36,6 +43,7 @@ impl<'a> From<LoadAllBorrowed<'a>> for LoadAll {
             id,
             title,
             description,
+            tags,
             is_completed,
             created_at,
             updated_at,
@@ -45,6 +53,7 @@ impl<'a> From<LoadAllBorrowed<'a>> for LoadAll {
             id,
             title: title.into(),
             description: description.into(),
+            tags: tags.map(|v| v.into()).collect(),
             is_completed,
             created_at,
             updated_at,
@@ -56,6 +65,7 @@ pub struct Load {
     pub id: uuid::Uuid,
     pub title: String,
     pub description: String,
+    pub tags: Vec<String>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -64,6 +74,7 @@ pub struct LoadBorrowed<'a> {
     pub id: uuid::Uuid,
     pub title: &'a str,
     pub description: &'a str,
+    pub tags: crate::ArrayIterator<'a, &'a str>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -74,6 +85,7 @@ impl<'a> From<LoadBorrowed<'a>> for Load {
             id,
             title,
             description,
+            tags,
             is_completed,
             created_at,
             updated_at,
@@ -83,6 +95,7 @@ impl<'a> From<LoadBorrowed<'a>> for Load {
             id,
             title: title.into(),
             description: description.into(),
+            tags: tags.map(|v| v.into()).collect(),
             is_completed,
             created_at,
             updated_at,
@@ -94,6 +107,7 @@ pub struct Create {
     pub id: uuid::Uuid,
     pub title: String,
     pub description: String,
+    pub tags: Vec<String>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -102,6 +116,7 @@ pub struct CreateBorrowed<'a> {
     pub id: uuid::Uuid,
     pub title: &'a str,
     pub description: &'a str,
+    pub tags: crate::ArrayIterator<'a, &'a str>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -112,6 +127,7 @@ impl<'a> From<CreateBorrowed<'a>> for Create {
             id,
             title,
             description,
+            tags,
             is_completed,
             created_at,
             updated_at,
@@ -121,6 +137,7 @@ impl<'a> From<CreateBorrowed<'a>> for Create {
             id,
             title: title.into(),
             description: description.into(),
+            tags: tags.map(|v| v.into()).collect(),
             is_completed,
             created_at,
             updated_at,
@@ -132,6 +149,7 @@ pub struct Update {
     pub id: uuid::Uuid,
     pub title: String,
     pub description: String,
+    pub tags: Vec<String>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -140,6 +158,7 @@ pub struct UpdateBorrowed<'a> {
     pub id: uuid::Uuid,
     pub title: &'a str,
     pub description: &'a str,
+    pub tags: crate::ArrayIterator<'a, &'a str>,
     pub is_completed: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -150,6 +169,7 @@ impl<'a> From<UpdateBorrowed<'a>> for Update {
             id,
             title,
             description,
+            tags,
             is_completed,
             created_at,
             updated_at,
@@ -159,6 +179,49 @@ impl<'a> From<UpdateBorrowed<'a>> for Update {
             id,
             title: title.into(),
             description: description.into(),
+            tags: tags.map(|v| v.into()).collect(),
+            is_completed,
+            created_at,
+            updated_at,
+        }
+    }
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct UpdateTags {
+    pub id: uuid::Uuid,
+    pub title: String,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub is_completed: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+pub struct UpdateTagsBorrowed<'a> {
+    pub id: uuid::Uuid,
+    pub title: &'a str,
+    pub description: &'a str,
+    pub tags: crate::ArrayIterator<'a, &'a str>,
+    pub is_completed: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+impl<'a> From<UpdateTagsBorrowed<'a>> for UpdateTags {
+    fn from(
+        UpdateTagsBorrowed {
+            id,
+            title,
+            description,
+            tags,
+            is_completed,
+            created_at,
+            updated_at,
+        }: UpdateTagsBorrowed<'a>,
+    ) -> Self {
+        Self {
+            id,
+            title: title.into(),
+            description: description.into(),
+            tags: tags.map(|v| v.into()).collect(),
             is_completed,
             created_at,
             updated_at,
@@ -423,6 +486,73 @@ where
         Ok(mapped)
     }
 }
+pub struct UpdateTagsQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
+    client: &'c C,
+    params: [&'a (dyn postgres_types::ToSql + Sync); N],
+    query: &'static str,
+    cached: Option<&'s tokio_postgres::Statement>,
+    extractor: fn(&tokio_postgres::Row) -> Result<UpdateTagsBorrowed, tokio_postgres::Error>,
+    mapper: fn(UpdateTagsBorrowed) -> T,
+}
+impl<'c, 'a, 's, C, T: 'c, const N: usize> UpdateTagsQuery<'c, 'a, 's, C, T, N>
+where
+    C: GenericClient,
+{
+    pub fn map<R>(
+        self,
+        mapper: fn(UpdateTagsBorrowed) -> R,
+    ) -> UpdateTagsQuery<'c, 'a, 's, C, R, N> {
+        UpdateTagsQuery {
+            client: self.client,
+            params: self.params,
+            query: self.query,
+            cached: self.cached,
+            extractor: self.extractor,
+            mapper,
+        }
+    }
+    pub async fn one(self) -> Result<T, tokio_postgres::Error> {
+        let row =
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+        Ok((self.mapper)((self.extractor)(&row)?))
+    }
+    pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
+        self.iter().await?.try_collect().await
+    }
+    pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
+        let opt_row =
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+        Ok(opt_row
+            .map(|row| {
+                let extracted = (self.extractor)(&row)?;
+                Ok((self.mapper)(extracted))
+            })
+            .transpose()?)
+    }
+    pub async fn iter(
+        self,
+    ) -> Result<
+        impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
+        tokio_postgres::Error,
+    > {
+        let stream = crate::client::async_::raw(
+            self.client,
+            self.query,
+            crate::slice_iter(&self.params),
+            self.cached,
+        )
+        .await?;
+        let mapped = stream
+            .map(move |res| {
+                res.and_then(|row| {
+                    let extracted = (self.extractor)(&row)?;
+                    Ok((self.mapper)(extracted))
+                })
+            })
+            .into_stream();
+        Ok(mapped)
+    }
+}
 pub struct UuidUuidQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c C,
     params: [&'a (dyn postgres_types::ToSql + Sync); N],
@@ -490,7 +620,7 @@ where
 pub struct LoadAllStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn load_all() -> LoadAllStmt {
     LoadAllStmt(
-        "SELECT id, title, description, is_completed, created_at, updated_at FROM todos",
+        "SELECT id, title, description, COALESCE(tags, ARRAY[]::text[]) AS tags, is_completed, created_at, updated_at FROM todos",
         None,
     )
 }
@@ -517,9 +647,10 @@ impl LoadAllStmt {
                         id: row.try_get(0)?,
                         title: row.try_get(1)?,
                         description: row.try_get(2)?,
-                        is_completed: row.try_get(3)?,
-                        created_at: row.try_get(4)?,
-                        updated_at: row.try_get(5)?,
+                        tags: row.try_get(3)?,
+                        is_completed: row.try_get(4)?,
+                        created_at: row.try_get(5)?,
+                        updated_at: row.try_get(6)?,
                     })
                 },
             mapper: |it| LoadAll::from(it),
@@ -529,7 +660,7 @@ impl LoadAllStmt {
 pub struct LoadStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn load() -> LoadStmt {
     LoadStmt(
-        "SELECT id, title, description, is_completed, created_at, updated_at FROM todos WHERE id = $1",
+        "SELECT id, title, description, COALESCE(tags, ARRAY[]::text[]) AS tags, is_completed, created_at, updated_at FROM todos WHERE id = $1",
         None,
     )
 }
@@ -556,9 +687,10 @@ impl LoadStmt {
                     id: row.try_get(0)?,
                     title: row.try_get(1)?,
                     description: row.try_get(2)?,
-                    is_completed: row.try_get(3)?,
-                    created_at: row.try_get(4)?,
-                    updated_at: row.try_get(5)?,
+                    tags: row.try_get(3)?,
+                    is_completed: row.try_get(4)?,
+                    created_at: row.try_get(5)?,
+                    updated_at: row.try_get(6)?,
                 })
             },
             mapper: |it| Load::from(it),
@@ -568,7 +700,7 @@ impl LoadStmt {
 pub struct CreateStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn create() -> CreateStmt {
     CreateStmt(
-        "INSERT INTO todos ( title, description, is_completed ) VALUES ( $1, $2, $3 ) RETURNING id, title, description, is_completed, created_at, updated_at",
+        "INSERT INTO todos ( title, description, is_completed ) VALUES ( $1, $2, $3 ) RETURNING id, title, description, COALESCE(tags, ARRAY[]::text[]) AS tags, is_completed, created_at, updated_at",
         None,
     )
 }
@@ -598,9 +730,10 @@ impl CreateStmt {
                         id: row.try_get(0)?,
                         title: row.try_get(1)?,
                         description: row.try_get(2)?,
-                        is_completed: row.try_get(3)?,
-                        created_at: row.try_get(4)?,
-                        updated_at: row.try_get(5)?,
+                        tags: row.try_get(3)?,
+                        is_completed: row.try_get(4)?,
+                        created_at: row.try_get(5)?,
+                        updated_at: row.try_get(6)?,
                     })
                 },
             mapper: |it| Create::from(it),
@@ -633,7 +766,7 @@ impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>
 pub struct UpdateStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn update() -> UpdateStmt {
     UpdateStmt(
-        "UPDATE todos SET title = $1, description = $2, is_completed = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, title, description, is_completed, created_at, updated_at",
+        "UPDATE todos SET title = $1, description = $2, is_completed = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 RETURNING id, title, description, COALESCE(tags, ARRAY[]::text[]) AS tags, is_completed, created_at, updated_at",
         None,
     )
 }
@@ -664,9 +797,10 @@ impl UpdateStmt {
                         id: row.try_get(0)?,
                         title: row.try_get(1)?,
                         description: row.try_get(2)?,
-                        is_completed: row.try_get(3)?,
-                        created_at: row.try_get(4)?,
-                        updated_at: row.try_get(5)?,
+                        tags: row.try_get(3)?,
+                        is_completed: row.try_get(4)?,
+                        created_at: row.try_get(5)?,
+                        updated_at: row.try_get(6)?,
                     })
                 },
             mapper: |it| Update::from(it),
@@ -695,6 +829,73 @@ impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql>
             &params.is_completed,
             &params.id,
         )
+    }
+}
+pub struct UpdateTagsStmt(&'static str, Option<tokio_postgres::Statement>);
+pub fn update_tags() -> UpdateTagsStmt {
+    UpdateTagsStmt(
+        "UPDATE todos SET tags = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, title, description, COALESCE(tags, ARRAY[]::text[]) AS tags, is_completed, created_at, updated_at",
+        None,
+    )
+}
+impl UpdateTagsStmt {
+    pub async fn prepare<'a, C: GenericClient>(
+        mut self,
+        client: &'a C,
+    ) -> Result<Self, tokio_postgres::Error> {
+        self.1 = Some(client.prepare(self.0).await?);
+        Ok(self)
+    }
+    pub fn bind<
+        'c,
+        'a,
+        's,
+        C: GenericClient,
+        T1: crate::StringSql,
+        T2: crate::ArraySql<Item = T1>,
+    >(
+        &'s self,
+        client: &'c C,
+        tags: &'a T2,
+        id: &'a uuid::Uuid,
+    ) -> UpdateTagsQuery<'c, 'a, 's, C, UpdateTags, 2> {
+        UpdateTagsQuery {
+            client,
+            params: [tags, id],
+            query: self.0,
+            cached: self.1.as_ref(),
+            extractor:
+                |row: &tokio_postgres::Row| -> Result<UpdateTagsBorrowed, tokio_postgres::Error> {
+                    Ok(UpdateTagsBorrowed {
+                        id: row.try_get(0)?,
+                        title: row.try_get(1)?,
+                        description: row.try_get(2)?,
+                        tags: row.try_get(3)?,
+                        is_completed: row.try_get(4)?,
+                        created_at: row.try_get(5)?,
+                        updated_at: row.try_get(6)?,
+                    })
+                },
+            mapper: |it| UpdateTags::from(it),
+        }
+    }
+}
+impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::ArraySql<Item = T1>>
+    crate::client::async_::Params<
+        'c,
+        'a,
+        's,
+        UpdateTagsParams<T1, T2>,
+        UpdateTagsQuery<'c, 'a, 's, C, UpdateTags, 2>,
+        C,
+    > for UpdateTagsStmt
+{
+    fn params(
+        &'s self,
+        client: &'c C,
+        params: &'a UpdateTagsParams<T1, T2>,
+    ) -> UpdateTagsQuery<'c, 'a, 's, C, UpdateTags, 2> {
+        self.bind(client, &params.tags, &params.id)
     }
 }
 pub struct DeleteStmt(&'static str, Option<tokio_postgres::Statement>);

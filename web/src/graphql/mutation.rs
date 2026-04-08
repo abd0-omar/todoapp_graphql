@@ -47,4 +47,22 @@ impl MutationRoot {
             Err(e) => Err(e.into()),
         }
     }
+
+    /// Set tags on a todo. Returns None if the todo does not exist.
+    async fn set_todo_tags(
+        &self,
+        ctx: &Context<'_>,
+        id: Uuid,
+        tags: Vec<String>,
+    ) -> Result<Option<Todo>> {
+        let pool = ctx.data::<DbPool>()?;
+        match todos::update_tags(id, tags, pool).await {
+            Ok(todo) => {
+                info!("updated tags on todo {:?}", todo);
+                Ok(Some(Todo::from(todo)))
+            }
+            Err(todoapp_graphql_db::Error::NoRecordFound) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
 }

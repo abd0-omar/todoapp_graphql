@@ -3,6 +3,7 @@ SELECT
     id,
     title,
     description,
+    COALESCE(tags, ARRAY[]::text[]) AS tags,
     is_completed,
     created_at,
     updated_at
@@ -14,6 +15,7 @@ SELECT
     id,
     title,
     description,
+    COALESCE(tags, ARRAY[]::text[]) AS tags,
     is_completed,
     created_at,
     updated_at
@@ -36,6 +38,7 @@ RETURNING
     id,
     title,
     description,
+    COALESCE(tags, ARRAY[]::text[]) AS tags,
     is_completed,
     created_at,
     updated_at;
@@ -53,6 +56,23 @@ RETURNING
     id,
     title,
     description,
+    COALESCE(tags, ARRAY[]::text[]) AS tags,
+    is_completed,
+    created_at,
+    updated_at;
+
+--! update_tags
+UPDATE todos
+SET
+    tags = :tags,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = :id
+RETURNING
+    id,
+    title,
+    description,
+    COALESCE(tags, ARRAY[]::text[]) AS tags,
     is_completed,
     created_at,
     updated_at;

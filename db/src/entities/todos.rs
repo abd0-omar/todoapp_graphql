@@ -10,6 +10,7 @@ pub struct Todo {
     pub id: Uuid,
     pub title: String,
     pub description: String,
+    pub tags: Vec<String>,
     pub is_completed: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -28,6 +29,7 @@ fn todo_from_load_all(todo: todo_queries::LoadAllBorrowed<'_>) -> Todo {
         id: todo.id,
         title: todo.title.to_owned(),
         description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
         is_completed: todo.is_completed,
         created_at: todo.created_at,
         updated_at: todo.updated_at,
@@ -39,6 +41,7 @@ fn todo_from_load(todo: todo_queries::LoadBorrowed<'_>) -> Todo {
         id: todo.id,
         title: todo.title.to_owned(),
         description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
         is_completed: todo.is_completed,
         created_at: todo.created_at,
         updated_at: todo.updated_at,
@@ -50,6 +53,7 @@ fn todo_from_create(todo: todo_queries::CreateBorrowed<'_>) -> Todo {
         id: todo.id,
         title: todo.title.to_owned(),
         description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
         is_completed: todo.is_completed,
         created_at: todo.created_at,
         updated_at: todo.updated_at,
@@ -61,6 +65,19 @@ fn todo_from_update(todo: todo_queries::UpdateBorrowed<'_>) -> Todo {
         id: todo.id,
         title: todo.title.to_owned(),
         description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
+        is_completed: todo.is_completed,
+        created_at: todo.created_at,
+        updated_at: todo.updated_at,
+    }
+}
+
+fn todo_from_update_tags(todo: todo_queries::UpdateTagsBorrowed<'_>) -> Todo {
+    Todo {
+        id: todo.id,
+        title: todo.title.to_owned(),
+        description: todo.description.to_owned(),
+        tags: todo.tags.map(|v| v.into()).collect(),
         is_completed: todo.is_completed,
         created_at: todo.created_at,
         updated_at: todo.updated_at,
@@ -115,6 +132,23 @@ pub async fn update(
             &id,
         )
         .map(todo_from_update)
+        .opt()
+        .await?
+    {
+        Some(todo) => Ok(todo),
+        None => Err(crate::Error::NoRecordFound),
+    }
+}
+
+pub async fn update_tags(
+    id: Uuid,
+    tags: Vec<String>,
+    db_pool: &crate::DbPool,
+) -> Result<Todo, crate::Error> {
+    let client = db_pool.get().await?;
+    match todo_queries::update_tags()
+        .bind(&client, &tags, &id)
+        .map(todo_from_update_tags)
         .opt()
         .await?
     {
