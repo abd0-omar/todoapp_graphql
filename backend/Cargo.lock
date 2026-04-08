@@ -2974,6 +2974,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "todoapp_graphql-refresh-token-port"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "thiserror",
+]
+
+[[package]]
 name = "todoapp_graphql-web"
 version = "0.0.1"
 dependencies = [
