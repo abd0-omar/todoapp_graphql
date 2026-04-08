@@ -60,6 +60,23 @@ function getErrorMessage<TData>(
   )
 }
 
+async function readGraphQLResponse<TData>(response: Response) {
+  const contentType = response.headers.get('content-type') ?? ''
+
+  if (
+    contentType.includes('application/json') ||
+    contentType.includes('application/graphql-response+json')
+  ) {
+    return (await response.json()) as GraphQLResponse<TData>
+  }
+
+  const text = await response.text()
+  throw new GraphQLRequestError(
+    text || getErrorMessage(response),
+    { status: response.status }
+  )
+}
+
 export async function graphqlRequest<
   TData,
   TVariables extends Record<string, unknown> | undefined = undefined,
@@ -75,7 +92,7 @@ export async function graphqlRequest<
       signal,
     })
 
-    const payload = (await response.json()) as GraphQLResponse<TData>
+    const payload = await readGraphQLResponse<TData>(response)
 
     if (!response.ok || payload.errors?.length) {
       throw new GraphQLRequestError(getErrorMessage(response, payload), {
@@ -98,6 +115,10 @@ export async function graphqlRequest<
     return payload.data
   } catch (error) {
     if (error instanceof GraphQLRequestError) {
+      throw error
+    }
+
+    if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
     }
 

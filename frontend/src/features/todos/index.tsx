@@ -130,6 +130,15 @@ export function Todos() {
     createTodoMutation.mutate(values)
   }
 
+  const isTogglePendingForTodo = (todoId: string) =>
+    toggleTodoMutation.isPending && toggleTodoMutation.variables?.todo.id === todoId
+
+  const isDeletePendingForTodo = (todoId: string) =>
+    deleteTodoMutation.isPending && deleteTodoMutation.variables?.id === todoId
+
+  const isRowActionPending = (todoId: string) =>
+    isTogglePendingForTodo(todoId) || isDeletePendingForTodo(todoId)
+
   return (
     <>
       <Header fixed>
@@ -199,10 +208,7 @@ export function Todos() {
                     <Button
                       size='sm'
                       variant={todo.isCompleted ? 'outline' : 'default'}
-                      disabled={
-                        toggleTodoMutation.isPending ||
-                        deleteTodoMutation.isPending
-                      }
+                      disabled={isRowActionPending(todo.id)}
                       onClick={() =>
                         toggleTodoMutation.mutate({
                           todo,
@@ -210,8 +216,7 @@ export function Todos() {
                         })
                       }
                     >
-                      {toggleTodoMutation.isPending &&
-                      toggleTodoMutation.variables?.todo.id === todo.id
+                      {isTogglePendingForTodo(todo.id)
                         ? 'Saving...'
                         : todo.isCompleted
                           ? 'Mark open'
@@ -220,10 +225,7 @@ export function Todos() {
                     <Button
                       variant='outline'
                       size='sm'
-                      disabled={
-                        toggleTodoMutation.isPending ||
-                        deleteTodoMutation.isPending
-                      }
+                      disabled={isRowActionPending(todo.id)}
                       onClick={() => openEditDialog(todo)}
                     >
                       Edit
@@ -231,10 +233,7 @@ export function Todos() {
                     <Button
                       variant='destructive'
                       size='sm'
-                      disabled={
-                        toggleTodoMutation.isPending ||
-                        deleteTodoMutation.isPending
-                      }
+                      disabled={isRowActionPending(todo.id)}
                       onClick={() => setTodoToDelete(todo)}
                     >
                       Delete
