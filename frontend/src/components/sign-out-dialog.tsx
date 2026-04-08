@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from '@tanstack/react-router'
+import { logout } from '@/features/auth/api/auth'
+import { GraphQLRequestError } from '@/lib/graphql-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
@@ -11,10 +14,23 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { auth } = useAuthStore()
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    setIsSigningOut(true)
+    const refresh = auth.refreshToken.trim()
+    if (refresh) {
+      try {
+        await logout(refresh)
+      } catch (error) {
+        if (error instanceof GraphQLRequestError) {
+          console.warn('Logout mutation failed:', error.message)
+        }
+      }
+    }
     auth.reset()
-    // Preserve current location for redirect after sign-in
+    setIsSigningOut(false)
+    onOpenChange(false)
     const currentPath = location.href
     navigate({
       to: '/sign-in',
@@ -32,6 +48,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
       confirmText='Sign out'
       destructive
       handleConfirm={handleSignOut}
+      isLoading={isSigningOut}
       className='sm:max-w-sm'
     />
   )

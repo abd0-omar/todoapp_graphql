@@ -69,6 +69,7 @@ export function SignUpForm({
         password: data.password,
       })
       auth.setAccessToken(payload.accessToken)
+      auth.setRefreshToken(payload.refreshToken)
       auth.setUser({ id: payload.user.id, email: payload.user.email })
       toast.success(`Account created for ${payload.user.email}.`)
       const targetPath = redirectTo || '/'
