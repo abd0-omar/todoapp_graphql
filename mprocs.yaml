@@ -2,4 +2,22 @@ procs:
   rust:
     cmd: ["cargo", "run"]
   postgres:
-    cmd: ["docker", "compose", "up", "-d"]
+    cmd:
+      - sh
+      - -c
+      - |
+        name=todoapp_graphql_postgres
+        if docker container inspect "$name" >/dev/null 2>&1; then
+          if [ "$(docker inspect -f '{{.State.Running}}' "$name")" = true ]; then
+            exec docker attach "$name"
+          else
+            exec docker start -a "$name"
+          fi
+        else
+          exec docker run --name "$name" \
+            -e POSTGRES_PASSWORD=todoapp_graphql \
+            -e POSTGRES_USER=todoapp_graphql \
+            -e POSTGRES_DB=todoapp_graphql \
+            -p 5432:5432 \
+            postgres
+        fi

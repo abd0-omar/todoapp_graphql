@@ -58,3 +58,7 @@ Use [mprocs](https://github.com/pvolok/mprocs).
 
 - stop the docker container (if it's running).
 - run the server and postgres database container in one command.
+- mprocs should be able to run/start/attach the docker container.
+    - run, if the container doesn't exist yet.
+    - start, if it exists but is stopped.
+    - attach, if it's already running.
