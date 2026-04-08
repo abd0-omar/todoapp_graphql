@@ -5,6 +5,7 @@ members = [
     "packages/db",
     "packages/db_queries",
     "packages/refresh_token_port",
+    "packages/redis",
     "packages/web",
     "packages/macros",
 ]
