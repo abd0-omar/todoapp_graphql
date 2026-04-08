@@ -10,7 +10,7 @@ APP_DATABASE__URL := $(DATABASE_URL)
 export POSTGRES_CONTAINER_NAME POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB POSTGRES_PORT DATABASE_URL APP_DATABASE__URL
 
 ATLAS_MIGRATIONS_DIR_TEMP := migrations
-ATLAS_SCHEMA := db/atlas/schema.sql
+ATLAS_SCHEMA := packages/db/atlas/schema.sql
 ATLAS_DEV_URL ?= docker://postgres/latest
 
 .PHONY: start dal
@@ -31,14 +31,14 @@ dal:
 	@newest=$$(ls -t $(ATLAS_MIGRATIONS_DIR_TEMP)/*.sql 2>/dev/null | head -1); \
 	test -n "$$newest" || (echo "dal: no .sql file in $(ATLAS_MIGRATIONS_DIR_TEMP)/" >&2; exit 1); \
 	max=0; \
-	for f in $(CURDIR)/db/migrations/V[0-9]*.sql; do \
+	for f in $(CURDIR)/packages/db/migrations/V[0-9]*.sql; do \
 		test -f "$$f" || continue; \
 		n=$$(basename "$$f" | sed -n 's/^V\([0-9][0-9]*\).*/\1/p'); \
 		test -n "$$n" || continue; \
 		if test "$$n" -gt "$$max" 2>/dev/null; then max=$$n; fi; \
 	done; \
 	next=$$((max + 1)); \
-	dest=`printf '%s/V%s__%s.sql' "$(CURDIR)/db/migrations" "$$next" "$(NAME)"`; \
+	dest=`printf '%s/V%s__%s.sql' "$(CURDIR)/packages/db/migrations" "$$next" "$(NAME)"`; \
 	cp "$$newest" "$$dest"; \
 	echo "dal: wrote $$dest"; \
-	atlas migrate hash --dir "file://$(CURDIR)/db/migrations"
+	atlas migrate hash --dir "file://$(CURDIR)/packages/db/migrations"

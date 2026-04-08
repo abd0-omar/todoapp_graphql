@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "cli",
-    "config",
-    "db",
-    "db_queries",
-    "web",
-    "macros"
+    "packages/cli",
+    "packages/config",
+    "packages/db",
+    "packages/db_queries",
+    "packages/web",
+    "packages/macros",
 ]
 resolver = "2"
-default-members = ["web"]
+default-members = ["packages/web"]

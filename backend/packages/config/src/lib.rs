@@ -109,8 +109,8 @@ pub struct DatabaseConfig {
 /// This is useful when they are mounted at separate locations in a Docker container, for example.
 ///
 /// Configuration settings are loaded from these sources (in that order so that latter soruces override former):
-/// * the `config/app.toml` file
-/// * the `config/environments/<development|production|test>.toml` files depending on the environment
+/// * the `packages/config/app.toml` file
+/// * the `packages/config/environments/<development|production|test>.toml` files depending on the environment
 /// * environment variables
 pub fn load_config<'a, T>(env: &Environment) -> Result<T, anyhow::Error>
 where
@@ -146,9 +146,9 @@ where
 
     let config: T = Figment::new()
         .merge(Serialized::defaults(ServerConfig::default()).key("server"))
-        .merge(Toml::file("config/app.toml"))
+        .merge(Toml::file("packages/config/app.toml"))
         .merge(Toml::file(format!(
-            "config/environments/{}",
+            "packages/config/environments/{}",
             env_config_file
         )))
         .merge(Env::prefixed("APP_").split("__"))
@@ -229,14 +229,14 @@ mod tests {
     #[test]
     fn test_load_config_development() {
         figment::Jail::expect_with(|jail| {
-            let config_dir = jail.create_dir("config")?;
+            let config_dir = jail.create_dir("packages/config")?;
             jail.create_file(
                 config_dir.join("app.toml"),
                 r#"
                 app_setting = "Just a TOML App!"
             "#,
             )?;
-            let environments_dir = jail.create_dir("config/environments")?;
+            let environments_dir = jail.create_dir("packages/config/environments")?;
             jail.create_file(
                 environments_dir.join("development.toml"),
                 r#"
@@ -273,14 +273,14 @@ mod tests {
     #[test]
     fn test_load_config_test() {
         figment::Jail::expect_with(|jail| {
-            let config_dir = jail.create_dir("config")?;
+            let config_dir = jail.create_dir("packages/config")?;
             jail.create_file(
                 config_dir.join("app.toml"),
                 r#"
                 app_setting = "Just a TOML App!"
             "#,
             )?;
-            let environments_dir = jail.create_dir("config/environments")?;
+            let environments_dir = jail.create_dir("packages/config/environments")?;
             jail.create_file(
                 environments_dir.join("test.toml"),
                 r#"
@@ -317,14 +317,14 @@ mod tests {
     #[test]
     fn test_load_config_production() {
         figment::Jail::expect_with(|jail| {
-            let config_dir = jail.create_dir("config")?;
+            let config_dir = jail.create_dir("packages/config")?;
             jail.create_file(
                 config_dir.join("app.toml"),
                 r#"
                 app_setting = "Just a TOML App!"
             "#,
             )?;
-            let environments_dir = jail.create_dir("config/environments")?;
+            let environments_dir = jail.create_dir("packages/config/environments")?;
             jail.create_file(
                 environments_dir.join("production.toml"),
                 r#"

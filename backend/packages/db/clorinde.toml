@@ -1,5 +1,5 @@
-queries = "db/queries"
-destination = "db_queries"
+queries = "packages/db/queries"
+destination = "packages/db_queries"
 use-workspace-deps = "Cargo.toml"
 
 [types.mapping]
