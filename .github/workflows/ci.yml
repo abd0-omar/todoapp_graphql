@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+jobs:
+  rustfmt:
+    name: Rust format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: todoapp_graphql
+          POSTGRES_USER: todoapp_graphql
+          POSTGRES_PASSWORD: todoapp_graphql
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy
+      - run: cargo clippy --all-targets -- -D warnings
+
+  rust-test:
+    name: Rust test + Hurl
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: todoapp_graphql
+          POSTGRES_USER: todoapp_graphql
+          POSTGRES_PASSWORD: todoapp_graphql
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: gacts/install-hurl@v1
+      - name: Build app
+        run: cargo build --bin todoapp_graphql-web
+      - name: Start app
+        run: |
+          nohup target/debug/todoapp_graphql-web > /tmp/todoapp_graphql.log 2>&1 &
+          timeout 30 bash -c 'until curl --silent --show-error --fail \
+            --header "Content-Type: application/json" \
+            --data "{\"query\":\"query { __typename }\"}" \
+            http://127.0.0.1:3000/graphql > /dev/null; do sleep 1; done'
+      - name: Hurl
+        run: ./tests/run.sh
+      - name: Dump app log on failure
+        if: failure()
+        run: cat /tmp/todoapp_graphql.log
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm build
