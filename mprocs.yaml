@@ -1,9 +1,9 @@
 procs:
-  rust:
+  web:
     shell: |
       : "${DATABASE_URL}"
       exec bacon --job run
-  postgres:
+  db:
     cmd:
       - sh
       - -c
@@ -46,3 +46,6 @@ procs:
         else
           exec docker run --name "$name" -p "${REDIS_PORT}:6379" "$REDIS_IMAGE"
         fi
+  frontend:
+    shell: |
+      exec npm --prefix packages/frontend run dev
