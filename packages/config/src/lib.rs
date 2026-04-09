@@ -1,7 +1,7 @@
 //! The todoapp_graphql-config crate contains functionality for parsing as well as accessing the project's documentation.
 
-use anyhow::{anyhow, Context};
 use dotenvy::dotenv;
+use rootcause::prelude::*;
 use figment::{
     providers::{Env, Format, Serialized, Toml},
     Figment,
@@ -149,7 +149,7 @@ fn default_jwt_refresh_token_ttl_secs() -> u64 {
 /// * the `packages/config/app.toml` file
 /// * the `packages/config/environments/<development|production|test>.toml` files depending on the environment
 /// * environment variables
-pub fn load_config<'a, T>(env: &Environment) -> Result<T, anyhow::Error>
+pub fn load_config<'a, T>(env: &Environment) -> Result<T, Report>
 where
     T: Deserialize<'a>,
 {
@@ -190,7 +190,8 @@ where
         )))
         .merge(Env::prefixed("APP_").split("__"))
         .extract()
-        .context("Could not read configuration!")?;
+        .context("Could not read configuration!")
+        .map_err(|r| r.into_dynamic())?;
 
     Ok(config)
 }
@@ -221,7 +222,7 @@ impl Display for Environment {
 /// Returns the currently active environment.
 ///
 /// If the `APP_ENVIRONMENT` env var is set, the application environment is parsed from that (which might fail if an invalid environment is set). If the env var is not set, [`Environment::Development`] is returned.
-pub fn get_env() -> Result<Environment, anyhow::Error> {
+pub fn get_env() -> Result<Environment, Report> {
     match env::var("APP_ENVIRONMENT") {
         Ok(val) => {
             info!(r#"Setting environment from APP_ENVIRONMENT: "{}""#, val);
@@ -237,7 +238,7 @@ pub fn get_env() -> Result<Environment, anyhow::Error> {
 /// Parses an [`Environment`] from a string.
 ///
 /// The environment can be passed in different forms, e.g. "dev", "development", "prod", etc. If an invalid environment is passed, an error is returned.
-pub fn parse_env(env: &str) -> Result<Environment, anyhow::Error> {
+pub fn parse_env(env: &str) -> Result<Environment, Report> {
     let env = &env.to_lowercase();
     match env.as_str() {
         "dev" => Ok(Environment::Development),
@@ -245,7 +246,7 @@ pub fn parse_env(env: &str) -> Result<Environment, anyhow::Error> {
         "test" => Ok(Environment::Test),
         "prod" => Ok(Environment::Production),
         "production" => Ok(Environment::Production),
-        unknown => Err(anyhow!(r#"Unknown environment: "{}"!"#, unknown)),
+        unknown => Err(report!(r#"Unknown environment: "{}"!"#, unknown)),
     }
 }
 

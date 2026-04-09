@@ -9,8 +9,8 @@ publish = false
 doctest = false
 
 [dependencies]
-anyhow = "1"
 dotenvy = "0.15"
+rootcause = "0.12.1"
 figment = { version = "0.10", features = ["toml", "env"] }
 serde = { version = "1.0", features = ["derive"] } 
 tracing = "0.1"

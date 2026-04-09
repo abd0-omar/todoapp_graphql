@@ -9,4 +9,3 @@ doctest = false
 
 [dependencies]
 async-trait = "0.1.89"
-thiserror = "2.0.18"

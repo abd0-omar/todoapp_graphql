@@ -1,7 +1,7 @@
 //! The todoapp_graphql_web crate contains the application's web interface with a GraphQL API. It also includes the application tests that are black-box tests, interfacing with the application like any other HTTP client.
 
-use anyhow::Context;
 use axum::serve;
+use rootcause::prelude::*;
 use todoapp_graphql_config::{get_env, load_config, Config};
 use tokio::net::TcpListener;
 use tracing::info;
@@ -28,17 +28,27 @@ pub mod state;
 /// 3. Initialize the application state (see [`state::init_app_state`])
 /// 4. Initialize the application's router (see [`routes::init_routes`])
 /// 5. Boot the application and start listening for requests on the configured interface and port
-pub async fn run() -> anyhow::Result<()> {
-    let env = get_env().context("Cannot get environment!")?;
-    let config: Config = load_config(&env).context("Cannot load config!")?;
+pub async fn run() -> Result<(), Report> {
+    let env = get_env()
+        .context("Cannot get environment!")
+        .map_err(|r| r.into_dynamic())?;
+    let config: Config = load_config(&env)
+        .context("Cannot load config!")
+        .map_err(|r| r.into_dynamic())?;
 
     let app_state = std::sync::Arc::new(state::init_app_state(config.clone()).await);
     let app = routes::init_routes(app_state);
 
     let addr = config.server.addr();
-    let listener = TcpListener::bind(&addr).await?;
+    let listener = TcpListener::bind(&addr)
+        .await
+        .context("Failed to bind TCP listener")
+        .map_err(|r| r.into_dynamic())?;
     info!("Listening on {}", &addr);
-    serve(listener, app.into_make_service()).await?;
+    serve(listener, app.into_make_service())
+        .await
+        .context("Server shut down with error")
+        .map_err(|r| r.into_dynamic())?;
 
     Ok(())
 }

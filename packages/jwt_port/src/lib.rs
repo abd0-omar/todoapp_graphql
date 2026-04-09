@@ -1,4 +1,4 @@
-use thiserror::Error;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerifiedToken {
@@ -6,17 +6,26 @@ pub struct VerifiedToken {
     pub exp: Option<i64>,
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum JwtError {
-    #[error("invalid JWT: {0}")]
     InvalidToken(String),
-    #[error("JWT has expired")]
     Expired,
-    #[error("JWT signature verification failed")]
     InvalidSignature,
-    #[error("failed to encode JWT: {0}")]
     EncodeFailed(String),
 }
+
+impl fmt::Display for JwtError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            JwtError::InvalidToken(s) => write!(f, "invalid JWT: {s}"),
+            JwtError::Expired => write!(f, "JWT has expired"),
+            JwtError::InvalidSignature => write!(f, "JWT signature verification failed"),
+            JwtError::EncodeFailed(s) => write!(f, "failed to encode JWT: {s}"),
+        }
+    }
+}
+
+impl std::error::Error for JwtError {}
 
 pub trait JwtAuthPort: Send + Sync {
     fn verify_access_token(&self, token: &str) -> Result<VerifiedToken, JwtError>;

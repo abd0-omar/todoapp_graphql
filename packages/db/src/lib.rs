@@ -1,8 +1,8 @@
 //! The todoapp_graphql-db crate contains all code related to database access: entities, migrations, functions for validating and reading and writing data.
 
-use anyhow::{Context, Result};
 use refinery::config::Config as RefineryConfig;
-use thiserror::Error;
+use rootcause::prelude::*;
+use std::fmt;
 use todoapp_graphql_config::DatabaseConfig;
 use todoapp_graphql_db_queries::deadpool_postgres::{
     Config as PoolConfig, Pool, PoolError, Runtime,
@@ -26,7 +26,7 @@ pub struct DbPool {
 }
 
 impl DbPool {
-    pub async fn get(&self) -> Result<DbClient, PoolError> {
+    pub async fn get(&self) -> std::result::Result<DbClient, PoolError> {
         self.pool.get().await
     }
 
@@ -51,49 +51,89 @@ pub mod entities;
 ///     Err(e) => Err((internal_error(e), "".into())),
 /// }
 /// ```
-pub async fn client(db_pool: &DbPool) -> Result<DbClient, anyhow::Error> {
+pub async fn client(db_pool: &DbPool) -> Result<DbClient, Report> {
     db_pool
         .get()
         .await
         .context("Failed to get database client from pool")
+        .map_err(|r| r.into_dynamic())
 }
 
 /// Errors that can occur as a result of a data layer operation.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum Error {
     /// General database error, e.g. communicating with the database failed
-    #[error("database query failed")]
-    DbError(#[from] tokio_postgres::Error),
-    #[error("database connection failed")]
-    PoolError(#[from] PoolError),
+    DbError(tokio_postgres::Error),
+    /// database connection failed
+    PoolError(PoolError),
     /// No record was found, e.g. when loading a record by ID. This variant is different from
     /// `Error::DbError(tokio_postgres::Error)` in that the latter indicates a bug, and
     /// `Error::NoRecordFound` does not. It merely represents an expected "not found" result.
-    #[error("no record found")]
     NoRecordFound,
-    #[error("email already registered")]
     DuplicateEmail,
-    #[error("validation failed")]
     /// An invalid changeset was passed to a writing operation such as creating or updating a record.
-    ValidationError(#[from] validator::ValidationErrors),
+    ValidationError(validator::ValidationErrors),
 }
 
-async fn migrate_database(config: &DatabaseConfig) -> Result<()> {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::DbError(_) => write!(f, "database query failed"),
+            Error::PoolError(_) => write!(f, "database connection failed"),
+            Error::NoRecordFound => write!(f, "no record found"),
+            Error::DuplicateEmail => write!(f, "email already registered"),
+            Error::ValidationError(_) => write!(f, "validation failed"),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::DbError(e) => Some(e),
+            Error::PoolError(e) => Some(e),
+            Error::ValidationError(e) => Some(e),
+            Error::NoRecordFound | Error::DuplicateEmail => None,
+        }
+    }
+}
+
+impl From<tokio_postgres::Error> for Error {
+    fn from(value: tokio_postgres::Error) -> Self {
+        Error::DbError(value)
+    }
+}
+
+impl From<PoolError> for Error {
+    fn from(value: PoolError) -> Self {
+        Error::PoolError(value)
+    }
+}
+
+impl From<validator::ValidationErrors> for Error {
+    fn from(value: validator::ValidationErrors) -> Self {
+        Error::ValidationError(value)
+    }
+}
+
+async fn migrate_database(config: &DatabaseConfig) -> Result<(), Report> {
     let mut refinery_config: RefineryConfig = config
         .url
         .parse()
-        .context("Failed to build refinery config from database URL")?;
+        .context("Failed to build refinery config from database URL")
+        .map_err(|r| r.into_dynamic())?;
 
     embedded::migrations::runner()
         .run_async(&mut refinery_config)
         .await
-        .context("Failed to run startup migrations")?;
+        .context("Failed to run startup migrations")
+        .map_err(|r| r.into_dynamic())?;
 
     Ok(())
 }
 
 /// Creates a connection pool to the database specified in the passed [`todoapp_graphql-config::DatabaseConfig`]
-pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, anyhow::Error> {
+pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, Report> {
     migrate_database(&config).await?;
 
     let mut pool_config = PoolConfig::new();
@@ -101,9 +141,14 @@ pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, anyhow::Erro
 
     let pool = pool_config
         .create_pool(Some(Runtime::Tokio1), NoTls)
-        .context("Failed to create database pool")?;
+        .context("Failed to create database pool")
+        .map_err(|r| r.into_dynamic())?;
 
-    let _ = pool.get().await.context("Failed to connect to database")?;
+    let _ = pool
+        .get()
+        .await
+        .context("Failed to connect to database")
+        .map_err(|r| r.into_dynamic())?;
 
     Ok(DbPool {
         pool,

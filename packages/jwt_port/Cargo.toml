@@ -6,6 +6,3 @@ publish = false
 
 [lib]
 doctest = false
-
-[dependencies]
-thiserror = "2.0.18"

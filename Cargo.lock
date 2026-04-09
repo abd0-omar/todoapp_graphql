@@ -2935,6 +2935,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "rootcause"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fc4bd36159c7ce180fe2de1e5371ef107a2885f0048430f631e78202e2255d4"
+dependencies = [
+ "hashbrown 0.16.1",
+ "indexmap",
+ "rootcause-internals",
+ "rustc-hash",
+ "triomphe",
+]
+
+[[package]]
+name = "rootcause-internals"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d0df4f84d119d09b5c9c9e8db0fe9bfb5b47b04d0bb95b0763cf81bd9baa559"
+dependencies = [
+ "triomphe",
+]
+
+[[package]]
 name = "rsa"
 version = "0.9.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2953,6 +2975,12 @@ dependencies = [
  "subtle",
  "zeroize",
 ]
+
+[[package]]
+name = "rustc-hash"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94300abf3f1ae2e2b8ffb7b58043de3d399c73fa6f4b73826402a5c457614dbe"
 
 [[package]]
 name = "rustc_version"
@@ -3497,10 +3525,10 @@ dependencies = [
 name = "todoapp_graphql-config"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "dotenvy",
  "figment",
  "googletest",
+ "rootcause",
  "serde",
  "tracing",
 ]
@@ -3509,11 +3537,10 @@ dependencies = [
 name = "todoapp_graphql-db"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "chrono",
  "refinery",
+ "rootcause",
  "serde",
- "thiserror",
  "todoapp_graphql-config",
  "todoapp_graphql-db-queries",
  "uuid",
@@ -3540,16 +3567,12 @@ version = "0.1.0"
 dependencies = [
  "jsonwebtoken",
  "serde",
- "thiserror",
  "todoapp_graphql-jwt-port",
 ]
 
 [[package]]
 name = "todoapp_graphql-jwt-port"
 version = "0.1.0"
-dependencies = [
- "thiserror",
-]
 
 [[package]]
 name = "todoapp_graphql-macros"
@@ -3565,7 +3588,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "redis",
- "thiserror",
  "todoapp_graphql-refresh-token-port",
  "tokio",
 ]
@@ -3575,23 +3597,21 @@ name = "todoapp_graphql-refresh-token-port"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "thiserror",
 ]
 
 [[package]]
 name = "todoapp_graphql-web"
 version = "0.0.1"
 dependencies = [
- "anyhow",
  "argon2",
  "async-graphql",
  "async-graphql-axum",
  "axum",
  "chrono",
  "rand_core 0.6.4",
+ "rootcause",
  "secrecy",
  "serde",
- "thiserror",
  "todoapp_graphql-config",
  "todoapp_graphql-db",
  "todoapp_graphql-jwt-jsonwebtoken",
@@ -3909,6 +3929,12 @@ dependencies = [
  "tracing-core",
  "tracing-log",
 ]
+
+[[package]]
+name = "triomphe"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd69c5aa8f924c7519d6372789a74eac5b94fb0f8fcf0d4a97eb0bfc3e785f39"
 
 [[package]]
 name = "tungstenite"

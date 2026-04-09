@@ -9,7 +9,6 @@ publish = false
 doctest = false
 
 [dependencies]
-anyhow = "1.0"
 argon2 = { version = "0.5.3", features = ["password-hash"] }
 axum = { version = "0.8", features = ["macros"] }
 todoapp_graphql-config = { path = "../config" }
@@ -28,8 +27,8 @@ tracing-subscriber = { version = "0.3", features = [
     "registry",
     "fmt",
 ] }
+rootcause = "0.12.1"
 uuid = { version = "1.6", features = ["serde"] }
-thiserror = "2.0"
 validator = "0.20"
 async-graphql = { version = "7.2.1", features = ["chrono", "uuid"] }
 async-graphql-axum = "7.2.1"

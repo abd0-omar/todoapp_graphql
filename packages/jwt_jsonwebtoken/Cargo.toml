@@ -10,5 +10,4 @@ doctest = false
 [dependencies]
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["rust_crypto"] }
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "2.0.18"
 todoapp_graphql-jwt-port = { path = "../jwt_port" }

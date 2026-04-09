@@ -1,11 +1,20 @@
 use async_trait::async_trait;
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum StoreError {
-    #[error("refresh token store operation failed: {0}")]
     Storage(String),
 }
+
+impl fmt::Display for StoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StoreError::Storage(s) => write!(f, "refresh token store operation failed: {s}"),
+        }
+    }
+}
+
+impl std::error::Error for StoreError {}
 
 #[async_trait]
 pub trait RefreshTokenStore: Send + Sync {
