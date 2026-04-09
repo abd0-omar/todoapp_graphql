@@ -134,6 +134,35 @@ fn default_jwt_refresh_token_ttl_secs() -> u64 {
     604800
 }
 
+/// Failure while resolving [`Environment`] or loading configuration from Figment.
+#[derive(Debug)]
+pub enum ConfigError {
+    /// `APP_ENVIRONMENT` (or equivalent) was set to an unrecognized value.
+    UnknownEnvironment { raw: String },
+    /// TOML/env layers could not be merged or deserialized into the target type.
+    LoadFailed(figment::Error),
+}
+
+impl Display for ConfigError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConfigError::UnknownEnvironment { raw } => {
+                write!(f, r#"Unknown environment: "{raw}"!"#)
+            }
+            ConfigError::LoadFailed(e) => Display::fmt(e, f),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ConfigError::UnknownEnvironment { .. } => None,
+            ConfigError::LoadFailed(e) => Some(e),
+        }
+    }
+}
+
 /// Loads the application configuration for a particular environment.
 ///
 /// Depending on the environment, this function will behave differently:
@@ -149,7 +178,7 @@ fn default_jwt_refresh_token_ttl_secs() -> u64 {
 /// * the `packages/config/app.toml` file
 /// * the `packages/config/environments/<development|production|test>.toml` files depending on the environment
 /// * environment variables
-pub fn load_config<'a, T>(env: &Environment) -> Result<T, Report>
+pub fn load_config<'a, T>(env: &Environment) -> Result<T, Report<ConfigError>>
 where
     T: Deserialize<'a>,
 {
@@ -190,8 +219,9 @@ where
         )))
         .merge(Env::prefixed("APP_").split("__"))
         .extract()
-        .context("Could not read configuration!")
-        .map_err(|r| r.into_dynamic())?;
+        .map_err(|e| {
+            report!(ConfigError::LoadFailed(e)).attach("Could not read configuration!")
+        })?;
 
     Ok(config)
 }
@@ -222,7 +252,7 @@ impl Display for Environment {
 /// Returns the currently active environment.
 ///
 /// If the `APP_ENVIRONMENT` env var is set, the application environment is parsed from that (which might fail if an invalid environment is set). If the env var is not set, [`Environment::Development`] is returned.
-pub fn get_env() -> Result<Environment, Report> {
+pub fn get_env() -> Result<Environment, Report<ConfigError>> {
     match env::var("APP_ENVIRONMENT") {
         Ok(val) => {
             info!(r#"Setting environment from APP_ENVIRONMENT: "{}""#, val);
@@ -238,7 +268,7 @@ pub fn get_env() -> Result<Environment, Report> {
 /// Parses an [`Environment`] from a string.
 ///
 /// The environment can be passed in different forms, e.g. "dev", "development", "prod", etc. If an invalid environment is passed, an error is returned.
-pub fn parse_env(env: &str) -> Result<Environment, Report> {
+pub fn parse_env(env: &str) -> Result<Environment, Report<ConfigError>> {
     let env = &env.to_lowercase();
     match env.as_str() {
         "dev" => Ok(Environment::Development),
@@ -246,7 +276,9 @@ pub fn parse_env(env: &str) -> Result<Environment, Report> {
         "test" => Ok(Environment::Test),
         "prod" => Ok(Environment::Production),
         "production" => Ok(Environment::Production),
-        unknown => Err(report!(r#"Unknown environment: "{}"!"#, unknown)),
+        unknown => Err(report!(ConfigError::UnknownEnvironment {
+            raw: unknown.to_string(),
+        })),
     }
 }
 

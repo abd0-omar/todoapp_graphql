@@ -5,7 +5,7 @@ use rootcause::prelude::*;
 use std::fmt;
 use todoapp_graphql_config::DatabaseConfig;
 use todoapp_graphql_db_queries::deadpool_postgres::{
-    Config as PoolConfig, Pool, PoolError, Runtime,
+    Config as PoolConfig, CreatePoolError, Pool, PoolError, Runtime,
 };
 use todoapp_graphql_db_queries::tokio_postgres::{self, NoTls};
 
@@ -51,12 +51,10 @@ pub mod entities;
 ///     Err(e) => Err((internal_error(e), "".into())),
 /// }
 /// ```
-pub async fn client(db_pool: &DbPool) -> Result<DbClient, Report> {
-    db_pool
-        .get()
-        .await
-        .context("Failed to get database client from pool")
-        .map_err(|r| r.into_dynamic())
+pub async fn client(db_pool: &DbPool) -> Result<DbClient, Report<Error>> {
+    db_pool.get().await.map_err(|e| {
+        report!(Error::PoolError(e)).attach("Failed to get database client from pool")
+    })
 }
 
 /// Errors that can occur as a result of a data layer operation.
@@ -66,6 +64,12 @@ pub enum Error {
     DbError(tokio_postgres::Error),
     /// database connection failed
     PoolError(PoolError),
+    /// Database URL could not be turned into a refinery config (migrations).
+    RefineryConfig(refinery::Error),
+    /// Embedded SQL migrations failed to apply.
+    Migration(refinery::Error),
+    /// Deadpool could not build the connection pool from configuration.
+    PoolCreate(CreatePoolError),
     /// No record was found, e.g. when loading a record by ID. This variant is different from
     /// `Error::DbError(tokio_postgres::Error)` in that the latter indicates a bug, and
     /// `Error::NoRecordFound` does not. It merely represents an expected "not found" result.
@@ -80,6 +84,9 @@ impl fmt::Display for Error {
         match self {
             Error::DbError(_) => write!(f, "database query failed"),
             Error::PoolError(_) => write!(f, "database connection failed"),
+            Error::RefineryConfig(_) => write!(f, "invalid database URL for migrations"),
+            Error::Migration(_) => write!(f, "database migration failed"),
+            Error::PoolCreate(_) => write!(f, "failed to create database pool"),
             Error::NoRecordFound => write!(f, "no record found"),
             Error::DuplicateEmail => write!(f, "email already registered"),
             Error::ValidationError(_) => write!(f, "validation failed"),
@@ -92,6 +99,8 @@ impl std::error::Error for Error {
         match self {
             Error::DbError(e) => Some(e),
             Error::PoolError(e) => Some(e),
+            Error::RefineryConfig(e) | Error::Migration(e) => Some(e),
+            Error::PoolCreate(e) => Some(e),
             Error::ValidationError(e) => Some(e),
             Error::NoRecordFound | Error::DuplicateEmail => None,
         }
@@ -116,24 +125,23 @@ impl From<validator::ValidationErrors> for Error {
     }
 }
 
-async fn migrate_database(config: &DatabaseConfig) -> Result<(), Report> {
-    let mut refinery_config: RefineryConfig = config
-        .url
-        .parse()
-        .context("Failed to build refinery config from database URL")
-        .map_err(|r| r.into_dynamic())?;
+async fn migrate_database(config: &DatabaseConfig) -> Result<(), Report<Error>> {
+    let mut refinery_config: RefineryConfig = config.url.parse().map_err(|e| {
+        report!(Error::RefineryConfig(e)).attach("Failed to build refinery config from database URL")
+    })?;
 
     embedded::migrations::runner()
         .run_async(&mut refinery_config)
         .await
-        .context("Failed to run startup migrations")
-        .map_err(|r| r.into_dynamic())?;
+        .map_err(|e| {
+            report!(Error::Migration(e)).attach("Failed to run startup migrations")
+        })?;
 
     Ok(())
 }
 
 /// Creates a connection pool to the database specified in the passed [`todoapp_graphql-config::DatabaseConfig`]
-pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, Report> {
+pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, Report<Error>> {
     migrate_database(&config).await?;
 
     let mut pool_config = PoolConfig::new();
@@ -141,14 +149,13 @@ pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, Report> {
 
     let pool = pool_config
         .create_pool(Some(Runtime::Tokio1), NoTls)
-        .context("Failed to create database pool")
-        .map_err(|r| r.into_dynamic())?;
+        .map_err(|e| {
+            report!(Error::PoolCreate(e)).attach("Failed to create database pool")
+        })?;
 
-    let _ = pool
-        .get()
-        .await
-        .context("Failed to connect to database")
-        .map_err(|r| r.into_dynamic())?;
+    let _ = pool.get().await.map_err(|e| {
+        report!(Error::PoolError(e)).attach("Failed to connect to database")
+    })?;
 
     Ok(DbPool {
         pool,
