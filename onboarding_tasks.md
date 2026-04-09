@@ -76,3 +76,35 @@ Add a Makefile command `dal` (data access layer) that uses `atlas` migration dif
 - It will run `atlas` to create a migration diffs.
 - Copy the file created by `atlas` to the `refinery` folder.
 - Rename the file to match `refinery` format.
+
+# Task 7 (Cargo workspace layout)
+
+## Description
+
+Rearrange the Rust project into a Cargo workspace at the repo root, with crates under a `packages` subfolder.
+
+## Requirements
+
+- Root `Cargo.toml` defines workspace members as those subfolders.
+
+# Task 8 (Authentication)
+
+## Description
+
+Add JWT authentication to the API.
+
+## Requirements
+
+- Mutations that change data require an authenticated user.
+
+# Task 9 (`make start`: db, web, frontend, redis)
+
+## Description
+
+Extend `make start` so one command should starts everything.
+
+## Requirements
+
+- Postgres (and Redis if the app uses it) via Docker or existing tooling.
+- Backend in cargo watch mode and frontend dev server.
+- Same run/start/attach behavior for containers as in Task 5 where it applies.
