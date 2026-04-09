@@ -52,11 +52,6 @@ const deleteTodoMutationResponseSchema = z.object({
   deleteTodo: z.boolean(),
 })
 
-export const todoKeys = {
-  all: ['todos'] as const,
-  detail: (id: string) => ['todos', id] as const,
-}
-
 export const TODO_FIELDS = `
   id
   title

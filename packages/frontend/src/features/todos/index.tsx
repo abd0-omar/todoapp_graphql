@@ -1,5 +1,13 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import {
+  StoreProvider,
+  useClearExceptionFor,
+  useDispatchAndWait,
+  useExceptionFor,
+  useIsFailed,
+  useIsWaiting,
+  useSelect,
+} from 'kiss-for-react'
 import { AlertCircle, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -18,13 +26,15 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { handleServerError } from '@/lib/handle-server-error'
 import {
-  createTodo,
-  deleteTodo,
-  getTodos,
-  todoKeys,
-  updateTodo,
-} from './api/todos'
+  CreateTodoAction,
+  DeleteTodoAction,
+  LoadTodosAction,
+  ToggleTodoAction,
+  UpdateTodoAction,
+} from './todos-actions'
+import { todosStore, type TodosState } from './todos-store'
 import { TodoDeleteDialog } from './components/todo-delete-dialog'
 import {
   TodoEmptyState,
@@ -34,29 +44,33 @@ import {
 import { TodoMutateDialog } from './components/todo-mutate-dialog'
 import { type Todo, type TodoInput } from './schema'
 
-export function Todos() {
-  const queryClient = useQueryClient()
+function TodoTotalBadge() {
+  const totalTodos = useSelect((s: TodosState) => s.items.length)
+  return <Badge variant='secondary'>{totalTodos} total</Badge>
+}
+
+function TodosContent() {
+  const dispatchAndWait = useDispatchAndWait()
+  const clearLoadException = useClearExceptionFor()
+
   const [isDialogOpen, setDialogOpen] = useState(false)
   const [currentTodo, setCurrentTodo] = useState<Todo | undefined>()
   const [todoToDelete, setTodoToDelete] = useState<Todo | undefined>()
-  const todosQuery = useQuery({
-    queryKey: todoKeys.all,
-    queryFn: ({ signal }) => getTodos(signal),
-  })
 
-  const replaceTodoInCache = (updatedTodo: Todo) => {
-    queryClient.setQueryData<Todo[]>(todoKeys.all, (currentTodos = []) =>
-      currentTodos.map((todo) =>
-        todo.id === updatedTodo.id ? updatedTodo : todo
-      )
-    )
-  }
+  const items = useSelect((s: TodosState) => s.items)
+  const rowPending = useSelect((s: TodosState) => s.rowPending)
 
-  const removeTodoFromCache = (todoId: string) => {
-    queryClient.setQueryData<Todo[]>(todoKeys.all, (currentTodos = []) =>
-      currentTodos.filter((todo) => todo.id !== todoId)
-    )
-  }
+  const loadWaiting = useIsWaiting(LoadTodosAction)
+  const loadFailed = useIsFailed(LoadTodosAction)
+  const loadException = useExceptionFor(LoadTodosAction)
+
+  const createWaiting = useIsWaiting(CreateTodoAction)
+  const updateWaiting = useIsWaiting(UpdateTodoAction)
+  const deleteWaiting = useIsWaiting(DeleteTodoAction)
+
+  useEffect(() => {
+    todosStore.dispatch(new LoadTodosAction())
+  }, [])
 
   const closeDialog = () => {
     setDialogOpen(false)
@@ -66,57 +80,6 @@ export function Todos() {
   const closeDeleteDialog = () => {
     setTodoToDelete(undefined)
   }
-
-  const createTodoMutation = useMutation({
-    mutationFn: createTodo,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: todoKeys.all })
-      toast.success('Todo created.')
-      closeDialog()
-    },
-  })
-
-  const updateTodoMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: TodoInput }) =>
-      updateTodo(id, input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: todoKeys.all })
-      toast.success('Todo updated.')
-      closeDialog()
-    },
-  })
-
-  const toggleTodoMutation = useMutation({
-    mutationFn: ({ todo, isCompleted }: { todo: Todo; isCompleted: boolean }) =>
-      updateTodo(todo.id, {
-        title: todo.title,
-        description: todo.description,
-        isCompleted,
-        tags: todo.tags,
-      }),
-    onSuccess: (updatedTodo, variables) => {
-      replaceTodoInCache(updatedTodo)
-      toast.success(
-        variables.isCompleted ? 'Todo marked complete.' : 'Todo marked open.'
-      )
-    },
-  })
-
-  const deleteTodoMutation = useMutation({
-    mutationFn: async (todo: Todo) => {
-      await deleteTodo(todo.id)
-      return todo
-    },
-    onSuccess: (deletedTodo) => {
-      removeTodoFromCache(deletedTodo.id)
-      toast.success('Todo deleted.')
-      closeDeleteDialog()
-    },
-  })
-
-  const isMutating =
-    createTodoMutation.isPending || updateTodoMutation.isPending
-  const totalTodos = todosQuery.data?.length ?? 0
 
   const openCreateDialog = () => {
     setCurrentTodo(undefined)
@@ -128,24 +91,49 @@ export function Todos() {
     setDialogOpen(true)
   }
 
-  const handleDialogSubmit = (values: TodoInput) => {
+  const handleDialogSubmit = async (values: TodoInput) => {
     if (currentTodo) {
-      updateTodoMutation.mutate({ id: currentTodo.id, input: values })
+      const status = await dispatchAndWait(
+        new UpdateTodoAction(currentTodo.id, values)
+      )
+      if (status.isCompletedOk) {
+        toast.success('Todo updated.')
+        closeDialog()
+      } else {
+        handleServerError(status.wrappedError ?? status.originalError)
+      }
       return
     }
 
-    createTodoMutation.mutate(values)
+    const status = await dispatchAndWait(new CreateTodoAction(values))
+    if (status.isCompletedOk) {
+      toast.success('Todo created.')
+      closeDialog()
+    } else {
+      handleServerError(status.wrappedError ?? status.originalError)
+    }
   }
 
   const isTogglePendingForTodo = (todoId: string) =>
-    toggleTodoMutation.isPending &&
-    toggleTodoMutation.variables?.todo.id === todoId
+    rowPending?.kind === 'toggle' && rowPending.todoId === todoId
 
   const isDeletePendingForTodo = (todoId: string) =>
-    deleteTodoMutation.isPending && deleteTodoMutation.variables?.id === todoId
+    rowPending?.kind === 'delete' && rowPending.todoId === todoId
 
   const isRowActionPending = (todoId: string) =>
     isTogglePendingForTodo(todoId) || isDeletePendingForTodo(todoId)
+
+  const isMutating = createWaiting || updateWaiting
+
+  const loadErrorMessage =
+    loadException?.message ??
+    loadException?.errorText ??
+    'The GraphQL API request failed.'
+
+  const handleRetryLoad = () => {
+    clearLoadException(LoadTodosAction)
+    todosStore.dispatch(new LoadTodosAction())
+  }
 
   return (
     <>
@@ -167,7 +155,7 @@ export function Todos() {
             </p>
           </div>
           <div className='flex flex-wrap items-center gap-2'>
-            <Badge variant='secondary'>{totalTodos} total</Badge>
+            <TodoTotalBadge />
             <Button onClick={openCreateDialog}>
               <Plus />
               New todo
@@ -183,21 +171,28 @@ export function Todos() {
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
-            {todosQuery.isPending ? <TodoListSkeleton /> : null}
+            {loadWaiting ? <TodoListSkeleton /> : null}
 
-            {todosQuery.isError ? (
+            {loadFailed ? (
               <Alert variant='destructive'>
                 <AlertCircle />
                 <AlertTitle>Unable to load todos</AlertTitle>
-                <AlertDescription>
-                  {todosQuery.error instanceof Error
-                    ? todosQuery.error.message
-                    : 'The GraphQL API request failed.'}
+                <AlertDescription className='flex flex-col gap-2'>
+                  <span>{loadErrorMessage}</span>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='w-fit'
+                    onClick={handleRetryLoad}
+                  >
+                    Retry
+                  </Button>
                 </AlertDescription>
               </Alert>
             ) : null}
 
-            {todosQuery.isSuccess && todosQuery.data.length === 0 ? (
+            {!loadWaiting && !loadFailed && items.length === 0 ? (
               <TodoEmptyState
                 action={
                   <Button onClick={openCreateDialog}>
@@ -208,21 +203,32 @@ export function Todos() {
               />
             ) : null}
 
-            {todosQuery.isSuccess && todosQuery.data.length > 0 ? (
+            {!loadWaiting && !loadFailed && items.length > 0 ? (
               <TodoList
-                todos={todosQuery.data}
+                todos={items}
                 renderActions={(todo) => (
                   <div className='flex flex-wrap justify-end gap-2'>
                     <Button
                       size='sm'
                       variant={todo.isCompleted ? 'outline' : 'default'}
                       disabled={isRowActionPending(todo.id)}
-                      onClick={() =>
-                        toggleTodoMutation.mutate({
-                          todo,
-                          isCompleted: !todo.isCompleted,
-                        })
-                      }
+                      onClick={async () => {
+                        const next = !todo.isCompleted
+                        const status = await dispatchAndWait(
+                          new ToggleTodoAction(todo, next)
+                        )
+                        if (status.isCompletedOk) {
+                          toast.success(
+                            next
+                              ? 'Todo marked complete.'
+                              : 'Todo marked open.'
+                          )
+                        } else {
+                          handleServerError(
+                            status.wrappedError ?? status.originalError
+                          )
+                        }
+                      }}
                     >
                       {isTogglePendingForTodo(todo.id)
                         ? 'Saving...'
@@ -277,12 +283,28 @@ export function Todos() {
             closeDeleteDialog()
           }
         }}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!todoToDelete) return
-          deleteTodoMutation.mutate(todoToDelete)
+          const status = await dispatchAndWait(
+            new DeleteTodoAction(todoToDelete)
+          )
+          if (status.isCompletedOk) {
+            toast.success('Todo deleted.')
+            closeDeleteDialog()
+          } else {
+            handleServerError(status.wrappedError ?? status.originalError)
+          }
         }}
-        isPending={deleteTodoMutation.isPending}
+        isPending={deleteWaiting}
       />
     </>
+  )
+}
+
+export function Todos() {
+  return (
+    <StoreProvider store={todosStore}>
+      <TodosContent />
+    </StoreProvider>
   )
 }
