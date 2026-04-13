@@ -1,10 +1,12 @@
 procs:
+  proxy:
+    shell: |
+      exec ./scripts/dev-proxy/start.sh
   web:
     shell: |
       : "${DATABASE_URL}"
-      : "${APP_SERVER__PORT:=3000}"
-      export APP_SERVER__PORT
-      exec portless --app-port "${APP_SERVER__PORT}" web bacon --job run
+      : "${APP_SERVER__PORT}"
+      exec bacon --job run
   db:
     cmd:
       - sh
@@ -50,4 +52,5 @@ procs:
         fi
   frontend:
     shell: |
-      exec portless frontend sh -c 'exec npm --prefix packages/frontend run dev -- --host 127.0.0.1 --strictPort --port "${PORT}"'
+      : "${DEV_FRONTEND_PORT}"
+      exec npm --prefix packages/frontend run dev -- --host 127.0.0.1 --port "${DEV_FRONTEND_PORT}" --strictPort

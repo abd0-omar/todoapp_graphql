@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 
+const apiPort = process.env.APP_SERVER__PORT ?? '3000'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -17,7 +19,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/graphql': {
-        target: 'http://127.0.0.1:3000',
+        target: `http://127.0.0.1:${apiPort}`,
         changeOrigin: true,
       },
       '/graphiql': {
