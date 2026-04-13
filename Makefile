@@ -6,8 +6,8 @@ POSTGRES_PORT := 5432
 DATABASE_URL := postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 # for Figment config
 APP_DATABASE__URL := $(DATABASE_URL)
-APP_SERVER__IP := 127.0.0.1
-APP_SERVER__PORT := 3000
+APP_SERVER__IP ?= 127.0.0.1
+APP_SERVER__PORT ?= 3000
 
 REDIS_IMAGE := redis:latest
 REDIS_CONTAINER_NAME := todoapp_graphql_redis
@@ -32,10 +32,13 @@ ATLAS_MIGRATIONS_DIR_TEMP := migrations
 ATLAS_SCHEMA := packages/db/atlas/schema.sql
 ATLAS_DEV_URL ?= docker://postgres/latest
 
-.PHONY: start dal proxy-setup-no-sudo proxy-hosts-clean
+.PHONY: start hurl dal proxy-setup-no-sudo proxy-hosts-clean
 
 start:
 	mprocs
+
+hurl:
+	./tests/run.sh
 
 proxy-setup-no-sudo:
 	./scripts/dev-proxy/setup-no-sudo.sh

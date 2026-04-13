@@ -41,14 +41,35 @@ procs:
         : "${REDIS_PORT}"
         : "${REDIS_IMAGE}"
         name="$REDIS_CONTAINER_NAME"
+        run_with_published_port() {
+          docker run --name "$name" -p "${REDIS_PORT}:6379" "$REDIS_IMAGE"
+        }
+        run_with_host_network() {
+          echo "[redis] Falling back to host networking (no published Docker port)." >&2
+          exec docker run --name "$name" --network host "$REDIS_IMAGE"
+        }
         if docker container inspect "$name" >/dev/null 2>&1; then
           if [ "$(docker inspect -f '{{.State.Running}}' "$name")" = true ]; then
             exec docker attach "$name"
           else
-            exec docker start -a "$name"
+            if docker start -a "$name"; then
+              exit 0
+            fi
+
+            network_mode="$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$name" 2>/dev/null || true)"
+            if [ "$network_mode" = "host" ]; then
+              exit 1
+            fi
+
+            docker rm "$name" >/dev/null 2>&1 || true
+            run_with_host_network
           fi
         else
-          exec docker run --name "$name" -p "${REDIS_PORT}:6379" "$REDIS_IMAGE"
+          if run_with_published_port; then
+            exit 0
+          fi
+          docker rm "$name" >/dev/null 2>&1 || true
+          run_with_host_network
         fi
   frontend:
     shell: |

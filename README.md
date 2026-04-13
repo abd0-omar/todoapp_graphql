@@ -62,10 +62,16 @@ Then access with `:1355` (for example `http://todoapp.localhost:1355`).
 API integration tests are run with **Hurl**:
 
 ```bash
-./tests/run.sh
+make hurl
 ```
 
-`tests/variables.env` points to `http://localhost:3000`, so run the backend on port `3000` before running Hurl tests.
+By default this targets `http://APP_SERVER__IP:APP_SERVER__PORT` (defaults to `http://127.0.0.1:3000`), matching the Make-exported app settings.
+
+To test a different backend port:
+
+```bash
+APP_SERVER__PORT=4000 make hurl
+```
 
 ## CLI crate status
 

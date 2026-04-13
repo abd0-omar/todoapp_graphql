@@ -1,6 +1,26 @@
+# Capture auth token for this file
+POST {{base_url}}/graphql
+Content-Type: application/json
+{
+  "query": "mutation SignUp($input: SignUpInput!) { signUp(input: $input) { accessToken } }",
+  "variables": {
+    "input": {
+      "email": "{{newUuid}}@example.com",
+      "password": "TestPassword123!@#"
+    }
+  }
+}
+
+HTTP 200
+[Asserts]
+jsonpath "$.data.signUp.accessToken" exists
+[Captures]
+auth_token: jsonpath "$.data.signUp.accessToken"
+
 # Create a todo, set tags, read them back, then clear with an empty list
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation CreateTodo($input: TodoInput!) { createTodo(input: $input) { id } }",
   "variables": {
@@ -18,6 +38,7 @@ todo_id: jsonpath "$.data.createTodo.id"
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation SetTodoTags($id: UUID!, $tags: [String!]!) { setTodoTags(id: $id, tags: $tags) { id tags } }",
   "variables": {
@@ -35,6 +56,7 @@ jsonpath "$.data.setTodoTags.tags[1]" == "urgent"
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "query GetTodo($id: UUID!) { todo(id: $id) { id tags } }",
   "variables": {
@@ -50,6 +72,7 @@ jsonpath "$.data.todo.tags[1]" == "urgent"
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation SetTodoTags($id: UUID!, $tags: [String!]!) { setTodoTags(id: $id, tags: $tags) { id tags } }",
   "variables": {
@@ -65,6 +88,7 @@ jsonpath "$.data.setTodoTags.tags" count == 0
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation SetTodoTags($id: UUID!, $tags: [String!]!) { setTodoTags(id: $id, tags: $tags) { id } }",
   "variables": {
@@ -80,6 +104,7 @@ jsonpath "$.data.setTodoTags" == null
 # Create with tags on TodoInput; update title without `tags` keeps them
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation CreateTodo($input: TodoInput!) { createTodo(input: $input) { id tags } }",
   "variables": {
@@ -101,6 +126,7 @@ jsonpath "$.data.createTodo.tags[1]" == "beta"
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation UpdateTodo($id: UUID!, $input: TodoInput!) { updateTodo(id: $id, input: $input) { id title tags } }",
   "variables": {
@@ -121,6 +147,7 @@ jsonpath "$.data.updateTodo.tags[1]" == "beta"
 
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation UpdateTodo($id: UUID!, $input: TodoInput!) { updateTodo(id: $id, input: $input) { id tags } }",
   "variables": {

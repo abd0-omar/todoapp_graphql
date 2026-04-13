@@ -58,10 +58,26 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: gacts/install-hurl@v1
+      - name: Set environment variables
+        run: |
+          echo "APP_DATABASE__URL=postgresql://todoapp_graphql:todoapp_graphql@localhost:5432/todoapp_graphql" >> $GITHUB_ENV
+          echo "APP_SERVER__IP=127.0.0.1" >> $GITHUB_ENV
+          echo "APP_SERVER__PORT=3000" >> $GITHUB_ENV
+          echo "APP_REDIS__URL=redis://127.0.0.1:6379" >> $GITHUB_ENV
+          echo "APP_JWT__SECRET=L/5mEwflOD6/iqTxs4AwQ6ntsxjWK7xRDCUCiUuaoD0A3XK7CiQh6x6YEsgqFpjT" >> $GITHUB_ENV
       - name: Build app
         run: cargo build --bin todoapp_graphql-web
       - name: Start app
@@ -70,9 +86,9 @@ jobs:
           timeout 30 bash -c 'until curl --silent --show-error --fail \
             --header "Content-Type: application/json" \
             --data "{\"query\":\"query { __typename }\"}" \
-            http://127.0.0.1:3000/graphql > /dev/null; do sleep 1; done'
+            http://127.0.0.1:${APP_SERVER__PORT}/graphql > /dev/null; do sleep 1; done'
       - name: Hurl
-        run: ./tests/run.sh
+        run: make hurl
       - name: Dump app log on failure
         if: failure()
         run: cat /tmp/todoapp_graphql.log

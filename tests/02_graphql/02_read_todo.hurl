@@ -1,6 +1,26 @@
+# Capture auth token for this file
+POST {{base_url}}/graphql
+Content-Type: application/json
+{
+  "query": "mutation SignUp($input: SignUpInput!) { signUp(input: $input) { accessToken } }",
+  "variables": {
+    "input": {
+      "email": "{{newUuid}}@example.com",
+      "password": "TestPassword123!@#"
+    }
+  }
+}
+
+HTTP 200
+[Asserts]
+jsonpath "$.data.signUp.accessToken" exists
+[Captures]
+auth_token: jsonpath "$.data.signUp.accessToken"
+
 # First create a todo to read
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "mutation CreateTodo($input: TodoInput!) { createTodo(input: $input) { id title description isCompleted } }",
   "variables": {
@@ -19,6 +39,7 @@ todo_id: jsonpath "$.data.createTodo.id"
 # Get all todos
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "query { todos { id title description isCompleted createdAt updatedAt } }"
 }
@@ -31,6 +52,7 @@ jsonpath "$.data.todos" count >= 1
 # Get the specific todo by ID
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "query GetTodo($id: UUID!) { todo(id: $id) { id title description isCompleted } }",
   "variables": {
@@ -49,6 +71,7 @@ jsonpath "$.data.todo.isCompleted" == {{todo_is_completed}}
 # Get a nonexistent todo (should return null, not error)
 POST {{base_url}}/graphql
 Content-Type: application/json
+Authorization: Bearer {{auth_token}}
 {
   "query": "query GetTodo($id: UUID!) { todo(id: $id) { id title } }",
   "variables": {
