@@ -52,9 +52,10 @@ pub mod entities;
 /// }
 /// ```
 pub async fn client(db_pool: &DbPool) -> Result<DbClient, Report<Error>> {
-    db_pool.get().await.map_err(|e| {
-        report!(Error::PoolError(e)).attach("Failed to get database client from pool")
-    })
+    db_pool
+        .get()
+        .await
+        .map_err(|e| report!(Error::PoolError(e)).attach("Failed to get database client from pool"))
 }
 
 /// Errors that can occur as a result of a data layer operation.
@@ -127,15 +128,14 @@ impl From<validator::ValidationErrors> for Error {
 
 async fn migrate_database(config: &DatabaseConfig) -> Result<(), Report<Error>> {
     let mut refinery_config: RefineryConfig = config.url.parse().map_err(|e| {
-        report!(Error::RefineryConfig(e)).attach("Failed to build refinery config from database URL")
+        report!(Error::RefineryConfig(e))
+            .attach("Failed to build refinery config from database URL")
     })?;
 
     embedded::migrations::runner()
         .run_async(&mut refinery_config)
         .await
-        .map_err(|e| {
-            report!(Error::Migration(e)).attach("Failed to run startup migrations")
-        })?;
+        .map_err(|e| report!(Error::Migration(e)).attach("Failed to run startup migrations"))?;
 
     Ok(())
 }
@@ -149,13 +149,12 @@ pub async fn connect_pool(config: DatabaseConfig) -> Result<DbPool, Report<Error
 
     let pool = pool_config
         .create_pool(Some(Runtime::Tokio1), NoTls)
-        .map_err(|e| {
-            report!(Error::PoolCreate(e)).attach("Failed to create database pool")
-        })?;
+        .map_err(|e| report!(Error::PoolCreate(e)).attach("Failed to create database pool"))?;
 
-    let _ = pool.get().await.map_err(|e| {
-        report!(Error::PoolError(e)).attach("Failed to connect to database")
-    })?;
+    let _ = pool
+        .get()
+        .await
+        .map_err(|e| report!(Error::PoolError(e)).attach("Failed to connect to database"))?;
 
     Ok(DbPool {
         pool,

@@ -1,11 +1,11 @@
 //! The todoapp_graphql-config crate contains functionality for parsing as well as accessing the project's documentation.
 
 use dotenvy::dotenv;
-use rootcause::prelude::*;
 use figment::{
     providers::{Env, Format, Serialized, Toml},
     Figment,
 };
+use rootcause::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fmt::{Display, Formatter};
@@ -219,9 +219,7 @@ where
         )))
         .merge(Env::prefixed("APP_").split("__"))
         .extract()
-        .map_err(|e| {
-            report!(ConfigError::LoadFailed(e)).attach("Could not read configuration!")
-        })?;
+        .map_err(|e| report!(ConfigError::LoadFailed(e)).attach("Could not read configuration!"))?;
 
     Ok(config)
 }
