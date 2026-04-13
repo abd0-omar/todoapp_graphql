@@ -98,6 +98,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      kiss-for-react:
+        specifier: ^1.1.0
+        version: 1.1.0(react@19.2.4)
       lucide-react:
         specifier: ^1.7.0
         version: 1.7.0(react@19.2.4)
@@ -2673,6 +2676,11 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
+
+  kiss-for-react@1.1.0:
+    resolution: {integrity: sha512-svFe6+rrhkT8LWberh/efNT2tZCxrtiHbDglauWq791WhbqieDUU9fRzNPh4E3Pe3yfHzSsDovhSQnZA0ZJrrA==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   knip@6.0.6:
     resolution: {integrity: sha512-PA+r1mTDLHH3eShlffn2ZDyH1hHvmgDj7JsTP3JKuhV/jZTyHbRkGcOd+uaSxfJZmcZyOE5zw3naP33WllTIlA==}
@@ -5552,6 +5560,10 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  kiss-for-react@1.1.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   knip@6.0.6:
     dependencies:

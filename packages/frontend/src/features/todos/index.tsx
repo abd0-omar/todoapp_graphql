@@ -10,6 +10,7 @@ import {
 } from 'kiss-for-react'
 import { AlertCircle, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,15 +27,6 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { handleServerError } from '@/lib/handle-server-error'
-import {
-  CreateTodoAction,
-  DeleteTodoAction,
-  LoadTodosAction,
-  ToggleTodoAction,
-  UpdateTodoAction,
-} from './todos-actions'
-import { todosStore, type TodosState } from './todos-store'
 import { TodoDeleteDialog } from './components/todo-delete-dialog'
 import {
   TodoEmptyState,
@@ -43,6 +35,14 @@ import {
 } from './components/todo-list'
 import { TodoMutateDialog } from './components/todo-mutate-dialog'
 import { type Todo, type TodoInput } from './schema'
+import {
+  CreateTodoAction,
+  DeleteTodoAction,
+  LoadTodosAction,
+  ToggleTodoAction,
+  UpdateTodoAction,
+} from './todos-actions'
+import { todosStore, type TodosState } from './todos-store'
 
 function TodoTotalBadge() {
   const totalTodos = useSelect((s: TodosState) => s.items.length)
@@ -219,9 +219,7 @@ function TodosContent() {
                         )
                         if (status.isCompletedOk) {
                           toast.success(
-                            next
-                              ? 'Todo marked complete.'
-                              : 'Todo marked open.'
+                            next ? 'Todo marked complete.' : 'Todo marked open.'
                           )
                         } else {
                           handleServerError(

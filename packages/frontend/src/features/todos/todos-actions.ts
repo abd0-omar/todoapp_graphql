@@ -1,12 +1,7 @@
 import { KissAction } from 'kiss-for-react'
-import {
-  createTodo,
-  deleteTodo,
-  getTodos,
-  updateTodo,
-} from './api/todos'
-import type { TodosState } from './todos-store'
+import { createTodo, deleteTodo, getTodos, updateTodo } from './api/todos'
 import type { Todo, TodoInput } from './schema'
+import type { TodosState } from './todos-store'
 
 export abstract class TodoBaseAction extends KissAction<TodosState> {}
 
