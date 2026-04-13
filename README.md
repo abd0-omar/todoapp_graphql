@@ -2,6 +2,11 @@
 
 Todo app monorepo with a Rust GraphQL backend and a Shadcn-based frontend.
 
+## Demo
+
+![msedge_XB3lpnPpiP](https://github.com/user-attachments/assets/5bd5a149-2b06-4ef0-89c3-a318cb58d042)
+
+
 ## Architecture
 
 This project follows **ports and adapters (hexagonal)**:
