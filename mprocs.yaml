@@ -2,7 +2,9 @@ procs:
   web:
     shell: |
       : "${DATABASE_URL}"
-      exec bacon --job run
+      : "${APP_SERVER__PORT:=3000}"
+      export APP_SERVER__PORT
+      exec portless --app-port "${APP_SERVER__PORT}" web bacon --job run
   db:
     cmd:
       - sh
@@ -48,4 +50,4 @@ procs:
         fi
   frontend:
     shell: |
-      exec npm --prefix packages/frontend run dev
+      exec portless frontend sh -c 'exec npm --prefix packages/frontend run dev -- --host 127.0.0.1 --strictPort --port "${PORT}"'
